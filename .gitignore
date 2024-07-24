@@ -1,4 +1,6 @@
 /llvm_build
+/msvc_build
+/msvc_build.bat
 /release
 /source_zips
 /release_zips
