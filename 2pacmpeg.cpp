@@ -1,23 +1,10 @@
 
 /*
-@NOTE:
-task manager is reporting some retarded memory usage. seems to go 
-up by some amount of megabytes each time the file dialog is 
-opened or ffmpeg is started. seems to stop going up at around
-the 50 MB (memory usage) mark
-
 @TODO: 
-make setting output path less painful
+improve ux
 
 @TODO: 
 make it possible to edit preset names and shit 
-
-@TODO:
-if the output path is only a filename, not a full directory just 
-output to the containing directory of the input file
-
-@TODO:
-make it possible to set default output directory
 */
 
 #include "2pacmpeg.h"

@@ -1,6 +1,4 @@
-/llvm_build
-/msvc_build
-/msvc_build.bat
+/clang_build
 /release
 /source_zips
 /release_zips
