@@ -31,6 +31,7 @@ INTERNAL void platform_init_threading(platform_thread_info *thread_info);
 DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr);
 DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr);
 INTERNAL s8 *platform_get_working_directory(s8 *destination, DWORD buffer_size);
+inline bool32 platform_file_exists(s8 *file_path);
 INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group, platform_thread_info *thread_info, runtime_vars *rt_vars);
 INTERNAL wchar_t *platform_file_input_dialog(wchar_t *output_buffer);
 INTERNAL bool32 platform_read_file(s8 *file_path, s8 *destination, u64 *dest_size);

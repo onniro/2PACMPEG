@@ -79,7 +79,7 @@ struct text_buffer_group {
     s8 *config_path;
     s8 *ffmpeg_path;
 
-    s8 *diagnostic_buffer; // @NOTE: stack allocated
+    s8 *diagnostic_buffer; // NOTE: stack allocated
 };
 
 struct preset_table {
@@ -97,7 +97,7 @@ struct platform_thread_info;
 
 INTERNAL last_diagnostic_type diagnostic_callback(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
-INTERNAL bool32 serialize_preset(text_buffer_group *tbuf_group, s8 *preset_name, s8 *preset_command);
+INTERNAL bool32 serialize_preset(s8 *preset_name, s8 *preset_command, text_buffer_group *tbuf_group);
 inline void insert_preset_name(preset_table *p_table, s8 *preset_name, int preset_name_length, int insert_index);
 inline int command_length(s8 *command_begin);
 INTERNAL void remove_preset(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index);

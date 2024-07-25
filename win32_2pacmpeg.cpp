@@ -109,7 +109,7 @@ platform_thread_wait_for_exit(void *thread_args_voidptr) {
     return 0;
 }
 
-// @TODO: rename this 
+// TODO: rename this 
 INTERNAL void
 platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
                                 platform_thread_info *thread_info,
@@ -124,7 +124,7 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
 #endif
     platform_init_threading(thread_info);
 
-    // @NOTE: static bc gets passed by pointer to a thread
+    // NOTE: static bc gets passed by pointer to a thread
     LOCAL_STATIC win32_thread_args thread_args;
     thread_args._tbuf_group = tbuf_group;
     thread_args._thread_info = thread_info;
@@ -188,7 +188,7 @@ platform_get_working_directory(s8 *destination, DWORD buffer_size) {
 }
 
 inline bool32
-platform_file_exists(char *file_path) {
+platform_file_exists(s8 *file_path) {
     bool32 result = false;
     HANDLE test_handle = CreateFileA(file_path, GENERIC_READ,
                                 FILE_SHARE_READ, 0, OPEN_EXISTING,
@@ -233,18 +233,6 @@ platform_read_file(s8 *file_path, s8 *destination, u64 *dest_size) {
 
     return result;
 }
-
-/*
-HANDLE CreateFileA(
-    LPCSTR                lpFileName,
-    DWORD                 dwDesiredAccess,
-    DWORD                 dwShareMode,
-    LPSECURITY_ATTRIBUTES lpSecurityAttributes,
-    DWORD                 dwCreationDisposition,
-    DWORD                 dwFlagsAndAttributes,
-    HANDLE                hTemplateFile
-);
-*/
 
 INTERNAL bool32
 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_size) {
@@ -355,7 +343,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance,
     platform_thread_info thread_info = {0};
 
     glfwMakeContextCurrent(rt_vars.win_ptr);
-    glfwSwapInterval(0); // @NOTE: it seems like this call was being ignored before
+    glfwSwapInterval(0); // NOTE: it seems like this call was being ignored before
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 

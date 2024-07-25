@@ -1,15 +1,18 @@
 
 /*
-@TODO: 
+TODO:
+finish the default output path stuff
+
+TODO: 
 improve ux
 
-@TODO: 
+TODO: 
 make it possible to edit preset names and shit 
 */
 
 #include "2pacmpeg.h"
 
-// @TODO: rename? since it's not really a "callback" anymore
+// TODO: rename? since it's not really a "callback" anymore
 INTERNAL last_diagnostic_type
 diagnostic_callback(s8 *message = 0, 
                     last_diagnostic_type type = undefined,
@@ -43,9 +46,48 @@ heapbuf_alloc_region(program_memory *pool, u64 region_size) {
     return result;
 }
 
+INTERNAL void
+save_default_output_path(text_buffer_group *tbuf_group,
+                        preset_table *p_table) {
+    s8 *default_dir_begin;
+
+    if(platform_file_exists(tbuf_group->config_path)) {
+        default_dir_begin = strchr(tbuf_group->config_buffer, TOKEN_OUTPUTDIR);
+
+        if(default_dir_begin) {
+            int existing_dir_len = command_length(default_dir_begin);
+
+            strncpy(tbuf_group->temp_buffer, (s8 *)((u64)tbuf_group->config_buffer + (u64)default_dir_begin),
+                    PMEM_CONFIGBUFFERSIZE - existing_dir_len);
+            tbuf_group->temp_buffer[strlen(tbuf_group->temp_buffer)] = 0x0;
+
+            snprintf(tbuf_group->config_buffer, PMEM_CONFIGBUFFERSIZE,
+                    "%c%s\n%s\0",
+                    TOKEN_OUTPUTDIR, tbuf_group->default_path_buffer,
+                    tbuf_group->temp_buffer);
+        }
+        else { // (edge case)
+            strncpy(tbuf_group->temp_buffer, tbuf_group->config_buffer,
+                    PMEM_CONFIGBUFFERSIZE);
+            tbuf_group->temp_buffer[strlen(tbuf_group->temp_buffer)] = 0x0;
+
+            snprintf(tbuf_group->config_buffer, PMEM_CONFIGBUFFERSIZE,
+                    "%c%s\n%s\0",
+                    TOKEN_OUTPUTDIR, tbuf_group->default_path_buffer,
+                    tbuf_group->temp_buffer);
+        }
+    }
+    else {
+        snprintf(tbuf_group->config_buffer, PMEM_CONFIGBUFFERSIZE,
+                "%c%s\n\0",
+                TOKEN_OUTPUTDIR, tbuf_group->default_path_buffer);
+    }
+}
+
 INTERNAL bool32
-serialize_preset(text_buffer_group *tbuf_group, s8 *preset_name,
-                                       s8 *preset_command) {
+serialize_preset(s8 *preset_name, s8 *preset_command,
+                text_buffer_group *tbuf_group) {
+
     memset(tbuf_group->temp_buffer, 0, strlen(tbuf_group->temp_buffer));
 
     snprintf(tbuf_group->temp_buffer,
@@ -53,7 +95,8 @@ serialize_preset(text_buffer_group *tbuf_group, s8 *preset_name,
             "%c%s%c%s\n\0",
             TOKEN_PRESETNAME, preset_name,
             TOKEN_PRESETCMD, preset_command);
-    strcat(tbuf_group->config_buffer, tbuf_group->temp_buffer);
+    strncat(tbuf_group->config_buffer, tbuf_group->temp_buffer, 
+            PMEM_CONFIGBUFFERSIZE);
 
     bool32 result = platform_write_file(tbuf_group->config_path, 
                         (void *)tbuf_group->config_buffer,
@@ -79,11 +122,11 @@ serialize_preset(text_buffer_group *tbuf_group, s8 *preset_name,
     return result;
 }
 
-// @NOTE: preset_name can be a pointer to a buffer that might not be null-terminated
+// NOTE: preset_name can be a pointer to a buffer that might not be null-terminated
 inline void
 insert_preset_name(preset_table *p_table, s8 *preset_name,
                 int preset_name_length, int insert_index) {
-    // @NOTE: 64 byte pitch for names
+    // NOTE: 64 byte pitch for names
     int insert_offset = PRESETNAME_PITCH*insert_index;
 
     strncpy(p_table->name_array + insert_offset,
@@ -142,7 +185,7 @@ remove_preset(preset_table *p_table, text_buffer_group *tbuf_group,
                 namearr_end_bytes);
         memset((void *)((u64)namearr_last_elem_ptr), 0, namearr_end_bytes);
 
-        // @TODO: i dont really know how slow this can get
+        // TODO: i dont really know how slow this can get
         // but try to see if it can be done faster
         for(int move_index = rm_index;
                 move_index < p_table->entry_amount - 1;
@@ -191,7 +234,7 @@ remove_preset(preset_table *p_table, text_buffer_group *tbuf_group,
     }
 }
 
-// @NOTE: a little slow
+// NOTE: a little slow
 inline bool32
 check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
     for(int name_index = 0;
@@ -206,7 +249,7 @@ check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
     return false;
 }
 
-// @TODO: align ui elements (mostly text fields) in this function properly
+// TODO: align ui elements (mostly text fields) in this function properly
 INTERNAL void
 basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table, 
         runtime_vars *rt_vars, platform_thread_info *thread_info) {
@@ -248,10 +291,13 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
                                         strlen(tbuf_group->config_buffer);
 
                     int preset_name_len = strlen(preset_name_buffer);
-                    serialize_preset(tbuf_group, preset_name_buffer, 
-                            tbuf_group->user_cmd_buffer);
+
+                    serialize_preset(preset_name_buffer, 
+                            tbuf_group->user_cmd_buffer,
+                            tbuf_group);
                     insert_preset_name(p_table, preset_name_buffer,
                                         preset_name_len, p_table->entry_amount);
+
                     p_table->command_table[p_table->entry_amount] = new_cmd_start + preset_name_len + 2;
                     ++p_table->entry_amount;
 
@@ -292,9 +338,24 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
 
     if(ImGui::Button("to default output directory")) {
         if(tbuf_group->default_path_buffer[0]) {
-            strncat(tbuf_group->output_path_buffer,
-                    tbuf_group->default_path_buffer,
-                    PMEM_OUTPUTPATHBUFFERSIZE);
+            if(tbuf_group->output_path_buffer[0]) {
+                tbuf_group->temp_buffer[0] = 0x0;
+                strncpy(tbuf_group->temp_buffer,
+                        tbuf_group->output_path_buffer,
+                        PMEM_OUTPUTPATHBUFFERSIZE);
+                tbuf_group->temp_buffer[strlen(tbuf_group->temp_buffer)] = 0x0;
+
+                snprintf(tbuf_group->output_path_buffer,
+                        PMEM_OUTPUTPATHBUFFERSIZE,
+                        "%s\\%s\0",
+                        tbuf_group->default_path_buffer, 
+                        tbuf_group->temp_buffer);
+            } 
+            else {
+                strncpy(tbuf_group->output_path_buffer,
+                        tbuf_group->default_path_buffer,
+                        PMEM_OUTPUTPATHBUFFERSIZE);
+            }
         }
         else {
             diagnostic_callback("default output directory not set",
@@ -305,7 +366,7 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
 
     ImGui::SameLine();
     if(ImGui::Button("set as default directory")) {
-        // @TODO
+        save_default_output_path(tbuf_group, p_table);
     }
 
     ImGui::Text("default output directory:");
@@ -322,7 +383,7 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
                 memset(tbuf_group->stdout_buffer, 0, strlen(tbuf_group->stdout_buffer));
                 memset(tbuf_group->stdout_line_buffer, 0, strlen(tbuf_group->stdout_line_buffer));
 
-                // @NOTE: -y to always overwrite existing files, as per the request of FagBlazt
+                // NOTE: -y to always overwrite existing files, as per the request of FagBlazt
                 snprintf(tbuf_group->command_buffer,
                         PMEM_COMMANDBUFFERSIZE,
                         "%s -y -hide_banner -i \"%s\" %s \"%s\"",
@@ -362,7 +423,7 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
     if(ImGui::Button("kill FFmpeg")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
-        // @NOTE: this is some windows-specific shit
+        // NOTE: this is some windows-specific shit
         if(rt_vars->ffmpeg_is_running) {
             if(TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, 
                                                 PROCESS_TERMINATE)) {
@@ -420,7 +481,7 @@ preset_list_update(text_buffer_group *tbuf_group,
 
         if(ImGui::BeginPopupContextItem(p_table->name_array + 
                 (preset_index * PRESETNAME_PITCH))) {
-            // @TODO: change the names
+            // TODO: change the names
             if(ImGui::Button("remove")) {
                 remove_preset(p_table, tbuf_group, preset_index);
             }
