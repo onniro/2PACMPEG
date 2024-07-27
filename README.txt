@@ -38,4 +38,4 @@ usage:
         folder of the ffmpeg executable
     -   click on start to launch FFmpeg 
 
-thanks to mastermind graphix designer Karkgami for the icon
+thanks to mastermind graphix designer Karkagami for the icon
