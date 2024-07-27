@@ -1,12 +1,12 @@
 
-#pragma once
+#if !defined(_2PACMPEG_DOT_H)
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 
 #define GL_SILENCE_DEPRECATION
-#if defined(_2PACMPEG_WIN32)
+#if _2PACMPEG_WIN32
     #define GLFW_EXPOSE_NATIVE_WIN32
 #endif
 
@@ -96,10 +96,13 @@ struct platform_thread_info;
 
  //////////////////////
 
-// updated 18.7.24@11am (not in the order in which they are defined)
+// updated 27.7.24 (in the order in which they are defined)
 
 INTERNAL last_diagnostic_type diagnostic_callback(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);
-inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
+inline void * heapbuf_alloc_region(program_memory *pool, u64 region_size);
+INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table);
+inline void adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index, int subtract_from_ceil);
+INTERNAL void save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table);
 INTERNAL bool32 serialize_preset(s8 *preset_name, s8 *preset_command, text_buffer_group *tbuf_group);
 inline void insert_preset_name(preset_table *p_table, s8 *preset_name, int preset_name_length, int insert_index);
 inline int command_length(s8 *command_begin);
@@ -108,3 +111,6 @@ inline bool32 check_duplicate_presetname(preset_table *p_table, s8 *p_name);
 INTERNAL void basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars, platform_thread_info *thread_info);
 INTERNAL void preset_list_update(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars);
 INTERNAL void update_window(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars, platform_thread_info *thread_info);
+
+#define _2PACMPEG_DOT_H
+#endif

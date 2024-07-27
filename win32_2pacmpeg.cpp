@@ -109,7 +109,6 @@ platform_thread_wait_for_exit(void *thread_args_voidptr) {
     return 0;
 }
 
-// TODO: rename this 
 INTERNAL void
 platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
                                 platform_thread_info *thread_info,
@@ -145,7 +144,6 @@ platform_file_input_dialog(wchar_t *output_buffer) {
         result = CoCreateInstance(CLSID_FileOpenDialog, 0, CLSCTX_ALL,
                                 IID_IFileOpenDialog, 
                                 (void **)&file_dialog);
-                                // reinterpret_cast<void **>(&file_dialog));
 
         if(SUCCEEDED(result) && SUCCEEDED(result = file_dialog->Show(0))) {
             IShellItem *shell_item;
@@ -358,7 +356,7 @@ WinMain(HINSTANCE instance, HINSTANCE,
     p_table.command_table = (s8 **)heapbuf_alloc_region(&p_memory, MAX_PRESETS);
     load_startup_files(&tbuf_group, &p_table);
 
-#if defined(_2PACMPEG_RELEASE)
+#if _2PACMPEG_RELEASE
     SetClassLongPtr(glfwGetWin32Window(rt_vars.win_ptr),GCLP_HICON,
                     (LONG_PTR)LoadIcon(GetModuleHandle(0), MAKEINTRESOURCE(__ICON_ID)));
 #endif

@@ -48,7 +48,7 @@ heapbuf_alloc_region(program_memory *pool, u64 region_size) {
 
 INTERNAL void
 load_startup_files(text_buffer_group *tbuf_group, 
-                        preset_table *p_table) {
+                    preset_table *p_table) {
     u64 config_size;
     if(platform_read_file(tbuf_group->config_path, 
             tbuf_group->config_buffer, &config_size)) {
@@ -96,13 +96,12 @@ load_startup_files(text_buffer_group *tbuf_group,
 
         s8 _temp_buf[256];
         snprintf(_temp_buf, 256,
-                "[info]: successfully loaded %i presets.",
+                "[info]: found %i presets.",
                 p_table->entry_amount);
         diagnostic_callback(_temp_buf,
                             last_diagnostic_type::info,
                             tbuf_group);
-    } 
-    else {
+    } else {
         diagnostic_callback("[info]: preset file doesn't exist or couldn't be loaded.",
                             last_diagnostic_type::undefined,
                             tbuf_group);
@@ -112,9 +111,29 @@ load_startup_files(text_buffer_group *tbuf_group,
     }
 }
 
-// TODO: testing
+// i think this can get really slow
+inline void
+adjust_pointer_table(preset_table *p_table, 
+                    text_buffer_group *tbuf_group, 
+                    int rm_index = 0, 
+                    int subtract_from_ceil = 0) {
+    for(int move_index = rm_index;
+            move_index < p_table->entry_amount - subtract_from_ceil;
+            ++move_index) {
+        if(!move_index) {
+            p_table->command_table[0] = 
+                strchr(tbuf_group->config_buffer, TOKEN_PRESETCMD) + 1;
+        } 
+        else {
+            p_table->command_table[move_index] = 
+                    strchr(p_table->command_table[move_index - 1], 
+                        TOKEN_PRESETCMD) + 1;
+        }
+    }
+}
+
 INTERNAL void
-save_default_output_path(text_buffer_group *tbuf_group,
+save_default_output_path(text_buffer_group *tbuf_group, 
                         preset_table *p_table) {
     s8 *default_dir_begin;
 
@@ -143,6 +162,8 @@ save_default_output_path(text_buffer_group *tbuf_group,
                     "%c%s\n%s\0",
                     TOKEN_OUTPUTDIR, tbuf_group->default_path_buffer,
                     tbuf_group->temp_buffer);
+
+            adjust_pointer_table(p_table, tbuf_group);
         }
     }
     else {
@@ -231,8 +252,9 @@ command_length(s8 *command_begin) {
 }
 
 INTERNAL void 
-remove_preset(preset_table *p_table, text_buffer_group *tbuf_group, 
-                                                int rm_index) {
+remove_preset(preset_table *p_table, 
+            text_buffer_group *tbuf_group, 
+            int rm_index) {
     // CLEANUP
     s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index * PRESETNAME_PITCH)))) - 2;
     u32 preset_length = command_length(whole_preset) + 1; // +1 for \n
@@ -267,21 +289,7 @@ remove_preset(preset_table *p_table, text_buffer_group *tbuf_group,
                 namearr_end_bytes);
         memset((void *)((u64)namearr_last_elem_ptr), 0, namearr_end_bytes);
 
-        // TODO: i dont really know how slow this can get
-        // but try to see if it can be done faster
-        for(int move_index = rm_index;
-                move_index < p_table->entry_amount - 1;
-                ++move_index) {
-            if(!move_index) {
-                p_table->command_table[0] = 
-                    strchr(tbuf_group->config_buffer, TOKEN_PRESETCMD) + 1;
-            } 
-            else {
-                p_table->command_table[move_index] = 
-                        strchr(p_table->command_table[move_index - 1], 
-                            TOKEN_PRESETCMD) + 1;
-            }
-        }
+        adjust_pointer_table(p_table, tbuf_group, rm_index, 1);
 
         p_table->command_table[p_table->entry_amount - 1] = 0;
     } 
