@@ -3,19 +3,19 @@
 description:
     the purpose of this program is to make it easier and faster for
     me and some friends to send shadowplay clips and whatnot to each other
-    on discord. usage of this software for non-zoomer purposes is against
+    on discord. using this software for non-zoomer purposes is against
     terms of service
 
-installation for with FFmpeg release:
-    step 1: download the archive where it says "2PACMPEG with FFmpeg" from 
+installation for 2PACMPEG_with_FFmpeg
+    step 1: download the archive where it says "2PACMPEG_with_FFmpeg" from 
             https://github.com/onniro/2PACMPEG/releases
     step 2: unpack the archive 
 
-installation for (no FFmpeg) release:
+installation for 2PACMPEG_no_FFmpeg
     step 1: obtain copies of the FFmpeg binaries (namely ffmpeg and ffprobe)
-    step 2: follow the "with FFmpeg release" installation instructions, 
-            but instead of downloading 2PACMPEG with FFmpeg, download
-            2PACMPEG (no FFmpeg)
+    step 2: follow the instructions in "installation for 2PACMPEG_with_FFmpeg", 
+            but instead of downloading 2PACMPEG_with_FFmpeg, download 
+            2PACMPEG_no_FFmpeg instead
     step 3: go to the containing folder of the 2PACMPEG executable
     step 4: make a folder there with the name ffmpeg
     step 5: copy (or move) the ffmpeg and ffprobe executables into that folder 
@@ -38,5 +38,4 @@ usage:
         folder of the ffmpeg executable
     -   click on start to launch FFmpeg 
 
-credits:
-    Karkagami - made the icon (/misc/FFMPAC.ico)
+thanks to mastermind graphix designer Karkgami for the icon
