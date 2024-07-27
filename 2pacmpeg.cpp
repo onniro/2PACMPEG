@@ -12,6 +12,19 @@ make it possible to edit preset names and shit
 
 #include "2pacmpeg.h"
 
+inline void *
+heapbuf_alloc_region(program_memory *pool, u64 region_size) {
+    void *result = 0;
+    u64 free_memory = ((u64)pool->memory + pool->capacity) -
+                           (u64)pool->write_ptr;
+    if(region_size <= free_memory) {
+        result = pool->write_ptr;
+        pool->write_ptr = (void *)((u64)pool->write_ptr + region_size);
+    }
+
+    return result;
+}
+
 // TODO: rename? since it's not really a "callback" anymore
 INTERNAL last_diagnostic_type
 diagnostic_callback(s8 *message = 0, 
@@ -31,19 +44,6 @@ diagnostic_callback(s8 *message = 0,
     }
  
     return last_diagnostic;
-}
-
-inline void *
-heapbuf_alloc_region(program_memory *pool, u64 region_size) {
-    void *result = 0;
-    u64 free_memory = ((u64)pool->memory + pool->capacity) -
-                           (u64)pool->write_ptr;
-    if(region_size <= free_memory) {
-        result = pool->write_ptr;
-        pool->write_ptr = (void *)((u64)pool->write_ptr + region_size);
-    }
-
-    return result;
 }
 
 INTERNAL void
@@ -101,7 +101,8 @@ load_startup_files(text_buffer_group *tbuf_group,
         diagnostic_callback(_temp_buf,
                             last_diagnostic_type::info,
                             tbuf_group);
-    } else {
+    } 
+    else {
         diagnostic_callback("[info]: preset file doesn't exist or couldn't be loaded.",
                             last_diagnostic_type::undefined,
                             tbuf_group);
@@ -120,14 +121,24 @@ adjust_pointer_table(preset_table *p_table,
     for(int move_index = rm_index;
             move_index < p_table->entry_amount - subtract_from_ceil;
             ++move_index) {
+        // checking for null before incrementing so that the pointers 
+        // remain completely null if strchr doesn't find them 
         if(!move_index) {
             p_table->command_table[0] = 
-                strchr(tbuf_group->config_buffer, TOKEN_PRESETCMD) + 1;
+                strchr(tbuf_group->config_buffer, TOKEN_PRESETCMD);
+
+            if(p_table->command_table[0]) {
+                p_table->command_table[0] += 1;
+            }
         } 
         else {
             p_table->command_table[move_index] = 
                     strchr(p_table->command_table[move_index - 1], 
-                        TOKEN_PRESETCMD) + 1;
+                        TOKEN_PRESETCMD);
+
+            if(p_table->command_table[move_index]) {
+                p_table->command_table[move_index] += 1;
+            }
         }
     }
 }
@@ -175,7 +186,7 @@ save_default_output_path(text_buffer_group *tbuf_group,
     if(platform_write_file(tbuf_group->config_path, 
                         (void *)tbuf_group->config_buffer,
                         strlen(tbuf_group->config_buffer))) {
-        diagnostic_callback("[info]: configuration updated. (default output directory saved).\n",
+        diagnostic_callback("[info]: configuration updated. (default output folder saved).\n",
                             last_diagnostic_type::info,
                             tbuf_group);
     }
@@ -426,7 +437,7 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
                     tbuf_group->output_path_buffer,
                     PMEM_OUTPUTPATHBUFFERSIZE);
 
-    if(ImGui::Button("to default output directory")) {
+    if(ImGui::Button("to default output folder")) {
         if(tbuf_group->default_path_buffer[0]) {
             if(tbuf_group->output_path_buffer[0]) {
                 tbuf_group->temp_buffer[0] = 0x0;

@@ -351,8 +351,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
 
     preset_table p_table = {0};
     p_table.capacity = MAX_PRESETS;
-    p_table.name_array = (s8 *)heapbuf_alloc_region(&p_memory, MAX_PRESETS);
-    memset(p_table.name_array, 0, PRESETNAME_PITCH * MAX_PRESETS);
+    p_table.name_array = (s8 *)heapbuf_alloc_region(&p_memory, PRESETNAME_PITCH*MAX_PRESETS);
+    memset(p_table.name_array, 0, PRESETNAME_PITCH*MAX_PRESETS);
     p_table.command_table = (s8 **)heapbuf_alloc_region(&p_memory, MAX_PRESETS);
     load_startup_files(&tbuf_group, &p_table);
 
