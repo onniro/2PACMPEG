@@ -259,60 +259,9 @@ platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_size) {
     return result;
 }
 
-INTERNAL void
-load_startup_files(text_buffer_group *tbuf_group, 
-                           preset_table *p_table) {
-    u64 config_size;
-    if(platform_read_file(tbuf_group->config_path, 
-            tbuf_group->config_buffer, &config_size)) {
-#if _2PACMPEG_DEBUG
-        OutputDebugStringA("[info]: loaded startup file.\n");
-#endif
-
-        s8 *name_ptr = tbuf_group->config_buffer;
-        s8 *cmd_ptr = name_ptr;
-        while(p_table->entry_amount < p_table->capacity) {
-            name_ptr = strchr(name_ptr, TOKEN_PRESETNAME);
-            if(name_ptr) {
-                cmd_ptr = strchr(++name_ptr, TOKEN_PRESETCMD);
-                if(cmd_ptr) {
-                    insert_preset_name(p_table, name_ptr, 
-                                    cmd_ptr - name_ptr, 
-                                    p_table->entry_amount);
-                    p_table->command_table[p_table->entry_amount] = ++cmd_ptr;
-
-                    ++p_table->entry_amount;
-                } 
-                else {
-                    break;
-                }
-            } 
-            else {
-                break;
-            }
-        }
-
-        s8 _temp_buf[256];
-        snprintf(_temp_buf, 256,
-                "[info]: successfully loaded %i presets.",
-                p_table->entry_amount);
-        diagnostic_callback(_temp_buf,
-                            last_diagnostic_type::info,
-                            tbuf_group);
-    } 
-    else {
-        diagnostic_callback("[info]: preset file doesn't exist or couldn't be loaded.",
-                            last_diagnostic_type::undefined,
-                            tbuf_group);
-#if _2PACMPEG_DEBUG
-        OutputDebugStringA("[info]: error loading startup file.\n");
-#endif
-    }
-}
-
 int __stdcall
-WinMain(HINSTANCE instance, HINSTANCE prev_instance,
-                   LPSTR cmd_args, int show_cmd) {
+WinMain(HINSTANCE instance, HINSTANCE,
+        char *cmd_args, int) {
 #define SCHEDULER_MS_RESOLUTION 1
     if(timeBeginPeriod(SCHEDULER_MS_RESOLUTION) == TIMERR_NOERROR) {
 #if _2PACMPEG_DEBUG
@@ -339,7 +288,6 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance,
         OutputDebugStringA("null pointer to GLFW window\n");
         return -1;
     }
-
     platform_thread_info thread_info = {0};
 
     glfwMakeContextCurrent(rt_vars.win_ptr);
@@ -354,6 +302,11 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance,
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(rt_vars.win_ptr, true);
     ImGui_ImplOpenGL3_Init("#version 130");
+
+    if(!strstr(cmd_args, "--use-bitmap-font")) {
+        rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\lucon.ttf",
+                                    13.0f, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+    }
 
     program_memory p_memory = {0};
     platform_make_heap_buffer(&p_memory, PMEMORY_AMT);
@@ -374,6 +327,7 @@ WinMain(HINSTANCE instance, HINSTANCE prev_instance,
     tbuf_group.config_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE);
     tbuf_group.wchar_input_buffer =     (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
 
+    // ?? ok
     if(tbuf_group.default_path_buffer) {
         tbuf_group.default_path_buffer[0] = 0x0;
     }

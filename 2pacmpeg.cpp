@@ -47,6 +47,73 @@ heapbuf_alloc_region(program_memory *pool, u64 region_size) {
 }
 
 INTERNAL void
+load_startup_files(text_buffer_group *tbuf_group, 
+                        preset_table *p_table) {
+    u64 config_size;
+    if(platform_read_file(tbuf_group->config_path, 
+            tbuf_group->config_buffer, &config_size)) {
+#if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
+        OutputDebugStringA("[info]: loaded startup file.\n");
+#endif
+
+        s8 *default_dir_ptr = strchr(tbuf_group->config_buffer,
+                                    TOKEN_OUTPUTDIR);
+        if(default_dir_ptr) {
+            strncpy(tbuf_group->default_path_buffer,
+                    default_dir_ptr + 1,
+                    command_length(default_dir_ptr + 1));
+        }
+
+        s8 *name_ptr = tbuf_group->config_buffer;
+        s8 *cmd_ptr = name_ptr;
+        while(p_table->entry_amount < p_table->capacity) {
+            name_ptr = strchr(name_ptr, TOKEN_PRESETNAME);
+            if(name_ptr) {
+                cmd_ptr = strchr(++name_ptr, TOKEN_PRESETCMD);
+                if(cmd_ptr) {
+                    insert_preset_name(p_table, name_ptr, 
+                                    cmd_ptr - name_ptr, 
+                                    p_table->entry_amount);
+                    p_table->command_table[p_table->entry_amount] = ++cmd_ptr;
+
+                    ++p_table->entry_amount;
+                } 
+                else {
+#if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
+                    OutputDebugStringA("[exception]: expected preset command token after name token, found 2 names back-to-back.\n");
+#endif
+
+                    break;
+                }
+            } 
+            else {
+#if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
+                OutputDebugStringA("[info]: finished parsing preset file.\n");
+#endif
+                break;
+            }
+        }
+
+        s8 _temp_buf[256];
+        snprintf(_temp_buf, 256,
+                "[info]: successfully loaded %i presets.",
+                p_table->entry_amount);
+        diagnostic_callback(_temp_buf,
+                            last_diagnostic_type::info,
+                            tbuf_group);
+    } 
+    else {
+        diagnostic_callback("[info]: preset file doesn't exist or couldn't be loaded.",
+                            last_diagnostic_type::undefined,
+                            tbuf_group);
+#if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
+        OutputDebugStringA("[info]: error loading startup file.\n");
+#endif
+    }
+}
+
+// TODO: testing
+INTERNAL void
 save_default_output_path(text_buffer_group *tbuf_group,
                         preset_table *p_table) {
     s8 *default_dir_begin;
@@ -55,10 +122,11 @@ save_default_output_path(text_buffer_group *tbuf_group,
         default_dir_begin = strchr(tbuf_group->config_buffer, TOKEN_OUTPUTDIR);
 
         if(default_dir_begin) {
-            int existing_dir_len = command_length(default_dir_begin);
+            int existing_dir_len = command_length(default_dir_begin) + 1;
 
-            strncpy(tbuf_group->temp_buffer, (s8 *)((u64)tbuf_group->config_buffer + (u64)default_dir_begin),
-                    PMEM_CONFIGBUFFERSIZE - existing_dir_len);
+            strncpy(tbuf_group->temp_buffer, 
+                    (s8 *)((u64)tbuf_group->config_buffer + existing_dir_len),
+                    PMEM_TEMPBUFFERSIZE);
             tbuf_group->temp_buffer[strlen(tbuf_group->temp_buffer)] = 0x0;
 
             snprintf(tbuf_group->config_buffer, PMEM_CONFIGBUFFERSIZE,
@@ -66,9 +134,9 @@ save_default_output_path(text_buffer_group *tbuf_group,
                     TOKEN_OUTPUTDIR, tbuf_group->default_path_buffer,
                     tbuf_group->temp_buffer);
         }
-        else { // (edge case)
+        else {
             strncpy(tbuf_group->temp_buffer, tbuf_group->config_buffer,
-                    PMEM_CONFIGBUFFERSIZE);
+                    PMEM_TEMPBUFFERSIZE);
             tbuf_group->temp_buffer[strlen(tbuf_group->temp_buffer)] = 0x0;
 
             snprintf(tbuf_group->config_buffer, PMEM_CONFIGBUFFERSIZE,
@@ -81,6 +149,19 @@ save_default_output_path(text_buffer_group *tbuf_group,
         snprintf(tbuf_group->config_buffer, PMEM_CONFIGBUFFERSIZE,
                 "%c%s\n\0",
                 TOKEN_OUTPUTDIR, tbuf_group->default_path_buffer);
+    }
+
+    if(platform_write_file(tbuf_group->config_path, 
+                        (void *)tbuf_group->config_buffer,
+                        strlen(tbuf_group->config_buffer))) {
+        diagnostic_callback("[info]: configuration updated. (default output directory saved).\n",
+                            last_diagnostic_type::info,
+                            tbuf_group);
+    }
+    else {
+        diagnostic_callback("[file write error]: updating configuration failed.\n",
+                            last_diagnostic_type::error,
+                            tbuf_group);
     }
 }
 
@@ -151,17 +232,18 @@ command_length(s8 *command_begin) {
 
 INTERNAL void 
 remove_preset(preset_table *p_table, text_buffer_group *tbuf_group, 
-                                                    int rm_index) {
-    // @CLEANUP
+                                                int rm_index) {
+    // CLEANUP
     s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index * PRESETNAME_PITCH)))) - 2;
     u32 preset_length = command_length(whole_preset) + 1; // +1 for \n
 
+    // why even check for this?
     if(preset_length == -1) {
         diagnostic_callback("[config error]: something weird happened.",
                             last_diagnostic_type::error,
                             tbuf_group);
         MessageBoxA(0, 
-                    "Failed to retrieve the length of the command being deleted.\nPLz report this to the genius who wrote this trash\n(You can continue using this program, but the preset could not be deleted)",
+                    "Failed to retrieve the length of the command.\n(You can continue using the program normally, but the preset could not be deleted)",
                     "CONFIG ERROR",
                     MB_OK|MB_ICONERROR);
 
@@ -219,10 +301,10 @@ remove_preset(preset_table *p_table, text_buffer_group *tbuf_group,
         diagnostic_callback("[info]: configuration updated. (preset deleted)",
                             last_diagnostic_type::info,
                             tbuf_group);
-#if defined(_2PACMPEG_DEBUG)
+#if _2PACMPEG_DEBUG
         OutputDebugStringA("[info]: configuration updated. (preset deleted)\n");
 #endif
-    }
+    } 
     else {
         char __diagnostic[512];
         snprintf(__diagnostic, 512,
@@ -365,14 +447,16 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
     }
 
     ImGui::SameLine();
-    if(ImGui::Button("set as default directory")) {
-        save_default_output_path(tbuf_group, p_table);
-    }
-
-    ImGui::Text("default output directory:");
+    ImGui::Text("default output folder:");
     ImGui::InputText("##default_output_path",
                     tbuf_group->default_path_buffer,
                     PMEM_OUTPUTPATHBUFFERSIZE);
+
+    if(ImGui::Button("set as default folder")) {
+        tbuf_group->diagnostic_buffer[0] = 0x0;
+
+        save_default_output_path(tbuf_group, p_table);
+    }
 
     if(ImGui::Button("start")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
@@ -423,10 +507,16 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
     if(ImGui::Button("kill FFmpeg")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
-        // NOTE: this is some windows-specific shit
         if(rt_vars->ffmpeg_is_running) {
+        // TODO: abstract to platform-specific file(s) (?)
+#if _2PACMPEG_WIN32
             if(TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, 
                                                 PROCESS_TERMINATE)) {
+#elif _2PACMPEG_LINUX 
+            // TODO:
+#else
+    #error "no (valid) build target specified." 
+#endif
                 rt_vars->ffmpeg_is_running = false;
 
                 diagnostic_callback("[info]: FFmpeg terminated.",

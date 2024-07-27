@@ -54,6 +54,9 @@ struct runtime_vars {
     int win_height;
     GLFWwindow *win_ptr;
     bool32 ffmpeg_is_running;
+#if 1
+    ImFont *default_font;
+#endif
 };
 
 enum last_diagnostic_type {
