@@ -25,11 +25,10 @@ heapbuf_alloc_region(program_memory *pool, u64 region_size) {
     return result;
 }
 
-// TODO: rename? since it's not really a "callback" anymore
 INTERNAL last_diagnostic_type
-diagnostic_callback(s8 *message = 0, 
-                    last_diagnostic_type type = undefined,
-                    text_buffer_group *tbuf_group = 0) {
+log_diagnostic(s8 *message = 0, 
+                last_diagnostic_type type = undefined,
+                text_buffer_group *tbuf_group = 0) {
     LOCAL_STATIC last_diagnostic_type last_diagnostic = undefined;
     
     if(message && tbuf_group) {
@@ -98,14 +97,14 @@ load_startup_files(text_buffer_group *tbuf_group,
         snprintf(_temp_buf, 256,
                 "[info]: found %i presets.",
                 p_table->entry_amount);
-        diagnostic_callback(_temp_buf,
-                            last_diagnostic_type::info,
-                            tbuf_group);
+        log_diagnostic(_temp_buf,
+                        last_diagnostic_type::info,
+                        tbuf_group);
     } 
     else {
-        diagnostic_callback("[info]: preset file doesn't exist or couldn't be loaded.",
-                            last_diagnostic_type::undefined,
-                            tbuf_group);
+        log_diagnostic("[info]: preset file doesn't exist or couldn't be loaded.",
+                        last_diagnostic_type::undefined,
+                        tbuf_group);
 #if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
         OutputDebugStringA("[info]: error loading startup file.\n");
 #endif
@@ -186,14 +185,14 @@ save_default_output_path(text_buffer_group *tbuf_group,
     if(platform_write_file(tbuf_group->config_path, 
                         (void *)tbuf_group->config_buffer,
                         strlen(tbuf_group->config_buffer))) {
-        diagnostic_callback("[info]: configuration updated. (default output folder saved).\n",
-                            last_diagnostic_type::info,
-                            tbuf_group);
+        log_diagnostic("[info]: configuration updated. (default output folder saved).\n",
+                        last_diagnostic_type::info,
+                        tbuf_group);
     }
     else {
-        diagnostic_callback("[file write error]: updating configuration failed.\n",
-                            last_diagnostic_type::error,
-                            tbuf_group);
+        log_diagnostic("[file write error]: updating configuration failed.\n",
+                        last_diagnostic_type::error,
+                        tbuf_group);
     }
 }
 
@@ -215,9 +214,9 @@ serialize_preset(s8 *preset_name, s8 *preset_command,
                         (void *)tbuf_group->config_buffer,
                         strlen(tbuf_group->config_buffer));
     if(result) {
-        diagnostic_callback("[info]: configuration updated. (preset added).",
-                            last_diagnostic_type::info,
-                            tbuf_group);
+        log_diagnostic("[info]: configuration updated. (preset added).",
+                        last_diagnostic_type::info,
+                        tbuf_group);
 #if _2PACMPEG_DEBUG
         OutputDebugStringA("[info]: configuration updated. (preset added).\n");
 #endif
@@ -227,9 +226,9 @@ serialize_preset(s8 *preset_name, s8 *preset_command,
         sprintf(__diagnostic, 
                 "[file write error]: could not write preset file %i",
                 GetLastError());
-        diagnostic_callback(__diagnostic,
-                            last_diagnostic_type::error,
-                            tbuf_group);
+        log_diagnostic(__diagnostic,
+                        last_diagnostic_type::error,
+                        tbuf_group);
     }
 
     return result;
@@ -272,9 +271,9 @@ remove_preset(preset_table *p_table,
 
     // why even check for this?
     if(preset_length == -1) {
-        diagnostic_callback("[config error]: something weird happened.",
-                            last_diagnostic_type::error,
-                            tbuf_group);
+        log_diagnostic("[config error]: something weird happened.",
+                        last_diagnostic_type::error,
+                        tbuf_group);
         MessageBoxA(0, 
                     "Failed to retrieve the length of the command.\n(You can continue using the program normally, but the preset could not be deleted)",
                     "CONFIG ERROR",
@@ -317,9 +316,9 @@ remove_preset(preset_table *p_table,
     if(platform_write_file(tbuf_group->config_path,
                         (void *)tbuf_group->config_buffer,
                         strlen(tbuf_group->config_buffer))) {
-        diagnostic_callback("[info]: configuration updated. (preset deleted)",
-                            last_diagnostic_type::info,
-                            tbuf_group);
+        log_diagnostic("[info]: configuration updated. (preset deleted)",
+                        last_diagnostic_type::info,
+                        tbuf_group);
 #if _2PACMPEG_DEBUG
         OutputDebugStringA("[info]: configuration updated. (preset deleted)\n");
 #endif
@@ -329,7 +328,7 @@ remove_preset(preset_table *p_table,
         snprintf(__diagnostic, 512,
                 "[error]: updating configuration failed with code %i",
                 GetLastError());
-        diagnostic_callback(__diagnostic,
+        log_diagnostic(__diagnostic,
                             last_diagnostic_type::error,
                             tbuf_group);
     }
@@ -348,6 +347,25 @@ check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
     }
 
     return false;
+}
+
+inline void
+strip_end_filename(s8 *file_path) {
+    int length = strlen(file_path);
+
+    for(int char_index = length - 1;
+            char_index >= 0;
+            --char_index) {
+#if _2PACMPEG_WIN32
+        if(file_path[char_index] == '\\') { 
+#else
+        if(file_path[char_index] == '/') {
+#endif
+            break;
+        }
+
+        file_path[char_index] = 0;
+    }
 }
 
 // TODO: align ui elements (mostly text fields) in this function properly
@@ -402,24 +420,24 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
                     p_table->command_table[p_table->entry_amount] = new_cmd_start + preset_name_len + 2;
                     ++p_table->entry_amount;
 
-                    diagnostic_callback("[info]: preset saved.", 
+                    log_diagnostic("[info]: preset saved.", 
                                         last_diagnostic_type::info,
                                         tbuf_group);
                 }
                 else {
-                    diagnostic_callback("preset name already exists.", 
+                    log_diagnostic("preset name already exists.", 
                                         last_diagnostic_type::error,
                                         tbuf_group);
                 }
             } 
             else {
-                diagnostic_callback("preset must have a name.", 
+                log_diagnostic("preset must have a name.", 
                                     last_diagnostic_type::error,
                                     tbuf_group);
             }
         } 
         else {
-            diagnostic_callback("maximum preset amount exceeded (lol).", 
+            log_diagnostic("maximum preset amount exceeded (lol).", 
                                 last_diagnostic_type::error,
                                 tbuf_group);
         }
@@ -459,7 +477,7 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
             }
         }
         else {
-            diagnostic_callback("default output directory not set",
+            log_diagnostic("default output directory not set",
                                 last_diagnostic_type::error,
                                 tbuf_group);
         }
@@ -486,7 +504,6 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
                 memset(tbuf_group->stdout_buffer, 0, strlen(tbuf_group->stdout_buffer));
                 memset(tbuf_group->stdout_line_buffer, 0, strlen(tbuf_group->stdout_line_buffer));
 
-                // NOTE: -y to always overwrite existing files, as per the request of FagBlazt
                 snprintf(tbuf_group->command_buffer,
                         PMEM_COMMANDBUFFERSIZE,
                         "%s -y -hide_banner -i \"%s\" %s \"%s\"",
@@ -500,13 +517,13 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
                                                 rt_vars);
             }
             else {
-                diagnostic_callback("no input file specified.",
+                log_diagnostic("no input file specified.",
                                     last_diagnostic_type::error,
                                     tbuf_group);
             }
         }
         else {
-            diagnostic_callback("FFmpeg is already running.",
+            log_diagnostic("FFmpeg is already running.",
                                 last_diagnostic_type::error,
                                 tbuf_group);
         }
@@ -538,13 +555,13 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
 #endif
                 rt_vars->ffmpeg_is_running = false;
 
-                diagnostic_callback("[info]: FFmpeg terminated.",
+                log_diagnostic("[info]: FFmpeg terminated.",
                                     last_diagnostic_type::info,
                                     tbuf_group);
             }
         }
         else {
-            diagnostic_callback("FFmpeg is not running.",
+            log_diagnostic("FFmpeg is not running.",
                                 last_diagnostic_type::error,
                                 tbuf_group);
         }
@@ -647,7 +664,7 @@ update_window(text_buffer_group *tbuf_group, preset_table *p_table,
 
     ImGui::NextColumn();
 
-    switch(diagnostic_callback()) {
+    switch(log_diagnostic()) {
     case error: {
         if(tbuf_group->diagnostic_buffer[0]) {
             ImGui::PushStyleColor(ImGuiCol_Text, 

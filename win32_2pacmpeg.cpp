@@ -1,6 +1,7 @@
 
 #include "windows.h"
 #include "shobjidl.h"
+#include "shlwapi.h"
 
 #include "stdio.h"
 
@@ -31,9 +32,6 @@ platform_init_threading(platform_thread_info *thread_info) {
     if(CreatePipe(&thread_info->read_handle, 
                 &thread_info->write_handle,
                 &thread_info->cmd_stream_attribs, 0)) {
-#if _2PACMPEG_DEBUG
-        OutputDebugStringA("[info]: CreatePipe succeeded.\n");
-#endif
         thread_info->cmd_stream_startupinfo.cb = sizeof(STARTUPINFO);
         thread_info->cmd_stream_startupinfo.dwFlags = STARTF_USESTDHANDLES;
         thread_info->cmd_stream_startupinfo.hStdInput = INVALID_HANDLE_VALUE;
@@ -80,7 +78,7 @@ platform_thread_wait_for_exit(void *thread_args_voidptr) {
             &thread_args->_thread_info->cmd_stream_startupinfo,
             &thread_args->_thread_info->cmd_stream_processinfo)) {
         thread_args->_rt_vars->ffmpeg_is_running = true;
-        diagnostic_callback("[info]: FFmpeg started...",
+        log_diagnostic("[info]: FFmpeg started...",
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
 
@@ -89,12 +87,12 @@ platform_thread_wait_for_exit(void *thread_args_voidptr) {
                 INFINITE);
 
         thread_args->_rt_vars->ffmpeg_is_running = false;
-        diagnostic_callback("[info]: FFmpeg finished.",
+        log_diagnostic("[info]: FFmpeg finished.",
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
     } 
     else {
-        diagnostic_callback("[fatal error]: FFmpeg failed to start.",
+        log_diagnostic("[fatal error]: FFmpeg failed to start.",
                             last_diagnostic_type::error,
                             thread_args->_tbuf_group);
     }
@@ -123,7 +121,6 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
 #endif
     platform_init_threading(thread_info);
 
-    // NOTE: static bc gets passed by pointer to a thread
     LOCAL_STATIC win32_thread_args thread_args;
     thread_args._tbuf_group = tbuf_group;
     thread_args._thread_info = thread_info;
@@ -188,13 +185,19 @@ platform_get_working_directory(s8 *destination, DWORD buffer_size) {
 inline bool32
 platform_file_exists(s8 *file_path) {
     bool32 result = false;
-    HANDLE test_handle = CreateFileA(file_path, GENERIC_READ,
-                                FILE_SHARE_READ, 0, OPEN_EXISTING,
-                                0, 0);
-    if(test_handle != INVALID_HANDLE_VALUE) {
+    if(PathFileExistsA(file_path)) {
         result = true;
     }
-    CloseHandle(test_handle);
+
+    return result;
+}
+
+inline bool32
+platform_directory_exists(s8 *directory_name) {
+    bool32 result = false;
+    if(PathIsDirectoryA(directory_name)) {
+        result = true;
+    }
 
     return result;
 }

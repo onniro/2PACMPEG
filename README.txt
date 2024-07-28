@@ -1,11 +1,5 @@
 2PACMPEG - cool front-end for FFmpeg
 
-description:
-    the purpose of this program is to make it easier and faster for
-    me and some friends to send shadowplay clips and whatnot to each other
-    on discord. using this software for non-zoomer purposes is against
-    terms of service
-
 installation for 2PACMPEG_with_FFmpeg
     step 1: download the archive where it says "2PACMPEG_with_FFmpeg" from 
             https://github.com/onniro/2PACMPEG/releases

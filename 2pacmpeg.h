@@ -96,9 +96,7 @@ struct platform_thread_info;
 
  //////////////////////
 
-// updated 27.7.24 (in the order in which they are defined)
-
-INTERNAL last_diagnostic_type diagnostic_callback(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);
+INTERNAL last_diagnostic_type log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);
 inline void * heapbuf_alloc_region(program_memory *pool, u64 region_size);
 INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table);
 inline void adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index, int subtract_from_ceil);
@@ -108,6 +106,7 @@ inline void insert_preset_name(preset_table *p_table, s8 *preset_name, int prese
 inline int command_length(s8 *command_begin);
 INTERNAL void remove_preset(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index);
 inline bool32 check_duplicate_presetname(preset_table *p_table, s8 *p_name);
+inline void strip_end_filename(s8 *file_path);
 INTERNAL void basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars, platform_thread_info *thread_info);
 INTERNAL void preset_list_update(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars);
 INTERNAL void update_window(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars, platform_thread_info *thread_info);
