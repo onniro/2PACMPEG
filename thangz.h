@@ -62,7 +62,8 @@ typedef struct {
 // string/buffer stuff (could rewrite some of these)
 
 inline u32
-string_length(s8 *string) {
+string_length(s8 *string) 
+{
     u32 count = 0;
     if(string) {
         while(*string++) {
@@ -74,7 +75,8 @@ string_length(s8 *string) {
 }
 
 inline s8 *
-string_copy(s8 *destination, s8 *source) {
+string_copy(s8 *destination, s8 *source) 
+{
     s8 *temp_destination = destination;
     while(*temp_destination++ = *source++);
 
@@ -82,7 +84,8 @@ string_copy(s8 *destination, s8 *source) {
 }
 
 inline s8 *
-string_n_copy(s8 *destination, s8 *source, u32 char_amount) {
+string_n_copy(s8 *destination, s8 *source, u32 char_amount) 
+{
     s8 *temp_destination = destination;
     for(u32 index = 0; index < char_amount; ++index) {
         *temp_destination++ = *source++;
@@ -92,7 +95,8 @@ string_n_copy(s8 *destination, s8 *source, u32 char_amount) {
 }
 
 inline void *
-mem_copy(void *destination, void *source, u64 bytes) {
+mem_copy(void *destination, void *source, u64 bytes) 
+{
     u8 *temp = (u8 *)destination;
     while(bytes) {
         *temp = *(u8 *)source += 1;
@@ -103,7 +107,8 @@ mem_copy(void *destination, void *source, u64 bytes) {
 }
 
 inline void *
-mem_set_value(void *destination, u8 value, u64 bytes) {
+mem_set_value(void *destination, u8 value, u64 bytes) 
+{
     u8 *temp = (u8 *)destination;
     while(bytes) {
         *temp++ = value;

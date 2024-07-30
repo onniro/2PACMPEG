@@ -13,7 +13,8 @@ make it possible to edit preset names and shit
 #include "2pacmpeg.h"
 
 inline void *
-heapbuf_alloc_region(program_memory *pool, u64 region_size) {
+heapbuf_alloc_region(program_memory *pool, u64 region_size) 
+{
     void *result = 0;
     u64 free_memory = ((u64)pool->memory + pool->capacity) -
                            (u64)pool->write_ptr;
@@ -28,7 +29,8 @@ heapbuf_alloc_region(program_memory *pool, u64 region_size) {
 INTERNAL last_diagnostic_type
 log_diagnostic(s8 *message = 0, 
                 last_diagnostic_type type = undefined,
-                text_buffer_group *tbuf_group = 0) {
+                text_buffer_group *tbuf_group = 0) 
+{
     LOCAL_STATIC last_diagnostic_type last_diagnostic = undefined;
     
     if(message && tbuf_group) {
@@ -47,7 +49,8 @@ log_diagnostic(s8 *message = 0,
 
 INTERNAL void
 load_startup_files(text_buffer_group *tbuf_group, 
-                    preset_table *p_table) {
+                    preset_table *p_table) 
+{
     u64 config_size;
     if(platform_read_file(tbuf_group->config_path, 
             tbuf_group->config_buffer, &config_size)) {
@@ -116,7 +119,8 @@ inline void
 adjust_pointer_table(preset_table *p_table, 
                     text_buffer_group *tbuf_group, 
                     int rm_index = 0, 
-                    int subtract_from_ceil = 0) {
+                    int subtract_from_ceil = 0) 
+{
     for(int move_index = rm_index;
             move_index < p_table->entry_amount - subtract_from_ceil;
             ++move_index) {
@@ -144,7 +148,8 @@ adjust_pointer_table(preset_table *p_table,
 
 INTERNAL void
 save_default_output_path(text_buffer_group *tbuf_group, 
-                        preset_table *p_table) {
+                        preset_table *p_table) 
+{
     s8 *default_dir_begin;
 
     if(platform_file_exists(tbuf_group->config_path)) {
@@ -198,8 +203,8 @@ save_default_output_path(text_buffer_group *tbuf_group,
 
 INTERNAL bool32
 serialize_preset(s8 *preset_name, s8 *preset_command,
-                text_buffer_group *tbuf_group) {
-
+                text_buffer_group *tbuf_group) 
+{
     memset(tbuf_group->temp_buffer, 0, strlen(tbuf_group->temp_buffer));
 
     snprintf(tbuf_group->temp_buffer,
@@ -237,7 +242,8 @@ serialize_preset(s8 *preset_name, s8 *preset_command,
 // NOTE: preset_name can be a pointer to a buffer that might not be null-terminated
 inline void
 insert_preset_name(preset_table *p_table, s8 *preset_name,
-                int preset_name_length, int insert_index) {
+                int preset_name_length, int insert_index) 
+{
     // NOTE: 64 byte pitch for names
     int insert_offset = PRESETNAME_PITCH*insert_index;
 
@@ -246,13 +252,13 @@ insert_preset_name(preset_table *p_table, s8 *preset_name,
 }
 
 inline int
-command_length(s8 *command_begin) {
+command_length(s8 *command_begin) 
+{
     int result = -1;
-
     s8 *command_end = strchr(command_begin, (s8)'\n');
+
     if(!command_end) {
-        s8 *command_end = strchr(command_begin, 
-                                (s8)'\0');
+        s8 *command_end = strchr(command_begin, (s8)'\0');
     }
     if(command_end) {
         result = command_end - command_begin;
@@ -264,7 +270,8 @@ command_length(s8 *command_begin) {
 INTERNAL void 
 remove_preset(preset_table *p_table, 
             text_buffer_group *tbuf_group, 
-            int rm_index) {
+            int rm_index) 
+{
     // CLEANUP
     s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index * PRESETNAME_PITCH)))) - 2;
     u32 preset_length = command_length(whole_preset) + 1; // +1 for \n
@@ -336,7 +343,8 @@ remove_preset(preset_table *p_table,
 
 // NOTE: a little slow
 inline bool32
-check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
+check_duplicate_presetname(preset_table *p_table, s8 *p_name) 
+{
     for(int name_index = 0;
             name_index < p_table->entry_amount;
             ++name_index) {
@@ -350,7 +358,8 @@ check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
 }
 
 inline void
-strip_end_filename(s8 *file_path) {
+strip_end_filename(s8 *file_path) 
+{
     int length = strlen(file_path);
 
     for(int char_index = length - 1;
@@ -368,10 +377,12 @@ strip_end_filename(s8 *file_path) {
     }
 }
 
-// TODO: align ui elements (mostly text fields) in this function properly
 INTERNAL void
-basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table, 
-        runtime_vars *rt_vars, platform_thread_info *thread_info) {
+basic_controls_update(text_buffer_group *tbuf_group, 
+                    preset_table *p_table, 
+                    runtime_vars *rt_vars, 
+                    platform_thread_info *thread_info) 
+{
     LOCAL_STATIC s8 preset_name_buffer[PRESETNAME_PITCH - 1] = {0}; // -1 for '\0'
     LOCAL_STATIC last_diagnostic_type diagnostic_type = undefined;
 
@@ -584,7 +595,9 @@ basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table,
 
 INTERNAL void
 preset_list_update(text_buffer_group *tbuf_group, 
-            preset_table *p_table, runtime_vars *rt_vars) {
+                preset_table *p_table, 
+                runtime_vars *rt_vars) 
+{
     ImGui::Text("presets:");
     ImGui::BeginChild("argument_presets", ImVec2((f32)ImGui::GetColumnWidth(),
                                             (f32)rt_vars->win_height - 45.0f));
@@ -622,7 +635,8 @@ preset_list_update(text_buffer_group *tbuf_group,
 
 INTERNAL void
 update_window(text_buffer_group *tbuf_group, preset_table *p_table, 
-        runtime_vars *rt_vars, platform_thread_info *thread_info) {
+        runtime_vars *rt_vars, platform_thread_info *thread_info) 
+{
     glClearColor(0, 0, 0, 0xff);
     glClear(GL_COLOR_BUFFER_BIT);
     glfwPollEvents();
