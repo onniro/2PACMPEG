@@ -24,12 +24,17 @@ usage:
         and click "add to argument presets" to add them to the argument presets
     -   enter the full path to the file that you want FFmpeg to output 
         (eg. c:\stuff\video.mp4)
-    -   you can also set a default folder that you can easily enter in 
-        with the click of a button by typing in the default output path 
-        field and then clicking on where it says "set as default folder"
+    -   you can also set a default output folder, so that you only have to 
+        specify the name of the file, instead of the full path. to do this
+        you have to type in the path to the folder under the text field labeled
+        "default output folder" and then click "set as default folder"
     note: if you have not set a default path and also only specify 
         the output filename, the file will be output to the containing 
         folder of the ffmpeg executable
     -   click on start to launch FFmpeg 
 
 thanks to mastermind graphix designer Karkagami for the icon
+
+dependencies:
+    imgui
+    glfw3
