@@ -13,9 +13,9 @@
 #define GLOBAL static
 #define LOCAL_STATIC static
 
-#define KILOBYTES(value) (value * 1024)
-#define MEGABYTES(value) (KILOBYTES(value) * 1024)
-#define GIGABYTES(Value) (MEGABYTES(Value) * 1024)
+#define KILOBYTES(value) (value*1024)
+#define MEGABYTES(value) (KILOBYTES(value)*1024)
+#define GIGABYTES(Value) (MEGABYTES(Value)*1024)
 
 #if defined(THANGZ_DEBUG)
     #define ASSERT_CRASH(expression) if(!(expression)) *(int *)0 = 1
@@ -24,11 +24,6 @@
 #endif
 
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof(array[0]))
-// this fucking sucks
-#define DO_TIMES(times) \
-    for(int __index = 0; \
-        __index < times; \
-        ++__index)
 #define XORSWAP(x, y) x ^= y; y ^= x; x ^= y
 
 // typedefs

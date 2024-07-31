@@ -13,8 +13,7 @@ make it possible to edit preset names and shit
 #include "2pacmpeg.h"
 
 inline void *
-heapbuf_alloc_region(program_memory *pool, u64 region_size) 
-{
+heapbuf_alloc_region(program_memory *pool, u64 region_size) {
     void *result = 0;
     u64 free_memory = ((u64)pool->memory + pool->capacity) -
                            (u64)pool->write_ptr;
@@ -29,8 +28,7 @@ heapbuf_alloc_region(program_memory *pool, u64 region_size)
 INTERNAL last_diagnostic_type
 log_diagnostic(s8 *message = 0, 
                 last_diagnostic_type type = undefined,
-                text_buffer_group *tbuf_group = 0) 
-{
+                text_buffer_group *tbuf_group = 0) {
     LOCAL_STATIC last_diagnostic_type last_diagnostic = undefined;
     
     if(message && tbuf_group) {
@@ -49,18 +47,17 @@ log_diagnostic(s8 *message = 0,
 
 INTERNAL void
 load_startup_files(text_buffer_group *tbuf_group, 
-                    preset_table *p_table) 
-{
+                    preset_table *p_table) {
     u64 config_size;
     if(platform_read_file(tbuf_group->config_path, 
             tbuf_group->config_buffer, &config_size)) {
 #if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
         OutputDebugStringA("[info]: loaded startup file.\n");
 #endif
-
+        // can cause weird shit if the user is trying to be retarded
         s8 *default_dir_ptr = strchr(tbuf_group->config_buffer,
                                     TOKEN_OUTPUTDIR);
-        if(default_dir_ptr) {
+        if(default_dir_ptr && (*(default_dir_ptr + 1) != '\n')) {
             strncpy(tbuf_group->default_path_buffer,
                     default_dir_ptr + 1,
                     command_length(default_dir_ptr + 1));
@@ -119,8 +116,7 @@ inline void
 adjust_pointer_table(preset_table *p_table, 
                     text_buffer_group *tbuf_group, 
                     int rm_index = 0, 
-                    int subtract_from_ceil = 0) 
-{
+                    int subtract_from_ceil = 0) {
     for(int move_index = rm_index;
             move_index < p_table->entry_amount - subtract_from_ceil;
             ++move_index) {
@@ -148,8 +144,7 @@ adjust_pointer_table(preset_table *p_table,
 
 INTERNAL void
 save_default_output_path(text_buffer_group *tbuf_group, 
-                        preset_table *p_table) 
-{
+                        preset_table *p_table) {
     s8 *default_dir_begin;
 
     if(platform_file_exists(tbuf_group->config_path)) {
@@ -203,8 +198,7 @@ save_default_output_path(text_buffer_group *tbuf_group,
 
 INTERNAL bool32
 serialize_preset(s8 *preset_name, s8 *preset_command,
-                text_buffer_group *tbuf_group) 
-{
+                text_buffer_group *tbuf_group) {
     memset(tbuf_group->temp_buffer, 0, strlen(tbuf_group->temp_buffer));
 
     snprintf(tbuf_group->temp_buffer,
@@ -242,8 +236,7 @@ serialize_preset(s8 *preset_name, s8 *preset_command,
 // NOTE: preset_name can be a pointer to a buffer that might not be null-terminated
 inline void
 insert_preset_name(preset_table *p_table, s8 *preset_name,
-                int preset_name_length, int insert_index) 
-{
+                int preset_name_length, int insert_index) {
     // NOTE: 64 byte pitch for names
     int insert_offset = PRESETNAME_PITCH*insert_index;
 
@@ -252,8 +245,7 @@ insert_preset_name(preset_table *p_table, s8 *preset_name,
 }
 
 inline int
-command_length(s8 *command_begin) 
-{
+command_length(s8 *command_begin) {
     int result = -1;
     s8 *command_end = strchr(command_begin, (s8)'\n');
 
@@ -270,8 +262,7 @@ command_length(s8 *command_begin)
 INTERNAL void 
 remove_preset(preset_table *p_table, 
             text_buffer_group *tbuf_group, 
-            int rm_index) 
-{
+            int rm_index) {
     // CLEANUP
     s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index * PRESETNAME_PITCH)))) - 2;
     u32 preset_length = command_length(whole_preset) + 1; // +1 for \n
@@ -343,8 +334,7 @@ remove_preset(preset_table *p_table,
 
 // NOTE: a little slow
 inline bool32
-check_duplicate_presetname(preset_table *p_table, s8 *p_name) 
-{
+check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
     for(int name_index = 0;
             name_index < p_table->entry_amount;
             ++name_index) {
@@ -358,8 +348,7 @@ check_duplicate_presetname(preset_table *p_table, s8 *p_name)
 }
 
 inline void
-strip_end_filename(s8 *file_path) 
-{
+strip_end_filename(s8 *file_path) {
     int length = strlen(file_path);
 
     for(int char_index = length - 1;
@@ -381,8 +370,7 @@ INTERNAL void
 basic_controls_update(text_buffer_group *tbuf_group, 
                     preset_table *p_table, 
                     runtime_vars *rt_vars, 
-                    platform_thread_info *thread_info) 
-{
+                    platform_thread_info *thread_info) {
     LOCAL_STATIC s8 preset_name_buffer[PRESETNAME_PITCH - 1] = {0}; // -1 for '\0'
     LOCAL_STATIC last_diagnostic_type diagnostic_type = undefined;
 
@@ -466,13 +454,15 @@ basic_controls_update(text_buffer_group *tbuf_group,
                     tbuf_group->output_path_buffer,
                     PMEM_OUTPUTPATHBUFFERSIZE);
 
+#define DEFAULT_OUTPUT_FOLDER_BUTTON 0
+#if DEFAULT_OUTPUT_FOLDER_BUTTON
     if(ImGui::Button("to default output folder")) {
         if(tbuf_group->default_path_buffer[0]) {
             if(tbuf_group->output_path_buffer[0]) {
                 tbuf_group->temp_buffer[0] = 0x0;
                 strncpy(tbuf_group->temp_buffer,
                         tbuf_group->output_path_buffer,
-                        PMEM_OUTPUTPATHBUFFERSIZE);
+                        PMEM_TEMPBUFFERSIZE);
                 tbuf_group->temp_buffer[strlen(tbuf_group->temp_buffer)] = 0x0;
 
                 snprintf(tbuf_group->output_path_buffer,
@@ -493,20 +483,21 @@ basic_controls_update(text_buffer_group *tbuf_group,
                                 tbuf_group);
         }
     }
+#endif
 
-    ImGui::SameLine();
+    // ImGui::SameLine();
     ImGui::Text("default output folder:");
+
     ImGui::InputText("##default_output_path",
                     tbuf_group->default_path_buffer,
                     PMEM_OUTPUTPATHBUFFERSIZE);
-
     if(ImGui::Button("set as default folder")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
         save_default_output_path(tbuf_group, p_table);
     }
 
-    if(ImGui::Button("start")) {
+    if(ImGui::Button("launch FFmpeg")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
         if(!rt_vars->ffmpeg_is_running) {
@@ -515,13 +506,30 @@ basic_controls_update(text_buffer_group *tbuf_group,
                 memset(tbuf_group->stdout_buffer, 0, strlen(tbuf_group->stdout_buffer));
                 memset(tbuf_group->stdout_line_buffer, 0, strlen(tbuf_group->stdout_line_buffer));
 
-                snprintf(tbuf_group->command_buffer,
-                        PMEM_COMMANDBUFFERSIZE,
-                        "%s -y -hide_banner -i \"%s\" %s \"%s\"",
-                        tbuf_group->ffmpeg_path,
-                        tbuf_group->input_path_buffer,
-                        tbuf_group->user_cmd_buffer,
-                        tbuf_group->output_path_buffer);
+                if(!strchr(tbuf_group->output_path_buffer, '\\') &&
+                        tbuf_group->default_path_buffer[0]) {
+                    snprintf(tbuf_group->command_buffer,
+                            PMEM_COMMANDBUFFERSIZE,
+                            "%s -y -hide_banner -i \"%s\" %s \"%s\\%s\"",
+                            tbuf_group->ffmpeg_path,
+                            tbuf_group->input_path_buffer,
+                            tbuf_group->user_cmd_buffer,
+                            tbuf_group->default_path_buffer,
+                            tbuf_group->output_path_buffer);
+#if _2PACMPEG_DEBUG
+                    OutputDebugStringA(tbuf_group->command_buffer);
+                    OutputDebugStringA("\n");
+#endif
+                }
+                else {
+                    snprintf(tbuf_group->command_buffer,
+                            PMEM_COMMANDBUFFERSIZE,
+                            "%s -y -hide_banner -i \"%s\" %s \"%s\"",
+                            tbuf_group->ffmpeg_path,
+                            tbuf_group->input_path_buffer,
+                            tbuf_group->user_cmd_buffer,
+                            tbuf_group->output_path_buffer);
+                }
 
                 platform_ffmpeg_execute_command(tbuf_group,
                                                 thread_info,
@@ -541,7 +549,7 @@ basic_controls_update(text_buffer_group *tbuf_group,
     }
 
     ImGui::SameLine();
-    if(ImGui::Button("clear##clear_output")) {
+    if(ImGui::Button("clear output##clear_output")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
         memset(tbuf_group->stdout_buffer, 0, strlen(tbuf_group->stdout_buffer));
@@ -556,14 +564,8 @@ basic_controls_update(text_buffer_group *tbuf_group,
 
         if(rt_vars->ffmpeg_is_running) {
         // TODO: abstract to platform-specific file(s) (?)
-#if _2PACMPEG_WIN32
-            if(TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, 
-                                                PROCESS_TERMINATE)) {
-#elif _2PACMPEG_LINUX 
-            // TODO:
-#else
-    #error "no (valid) build target specified." 
-#endif
+
+            if(platform_kill_process(thread_info)) {
                 rt_vars->ffmpeg_is_running = false;
 
                 log_diagnostic("[info]: FFmpeg terminated.",
@@ -596,8 +598,7 @@ basic_controls_update(text_buffer_group *tbuf_group,
 INTERNAL void
 preset_list_update(text_buffer_group *tbuf_group, 
                 preset_table *p_table, 
-                runtime_vars *rt_vars) 
-{
+                runtime_vars *rt_vars) {
     ImGui::Text("presets:");
     ImGui::BeginChild("argument_presets", ImVec2((f32)ImGui::GetColumnWidth(),
                                             (f32)rt_vars->win_height - 45.0f));
@@ -635,8 +636,7 @@ preset_list_update(text_buffer_group *tbuf_group,
 
 INTERNAL void
 update_window(text_buffer_group *tbuf_group, preset_table *p_table, 
-        runtime_vars *rt_vars, platform_thread_info *thread_info) 
-{
+        runtime_vars *rt_vars, platform_thread_info *thread_info) {
     glClearColor(0, 0, 0, 0xff);
     glClear(GL_COLOR_BUFFER_BIT);
     glfwPollEvents();
@@ -717,8 +717,8 @@ update_window(text_buffer_group *tbuf_group, preset_table *p_table,
     ImGui::Render();
     glfwGetFramebufferSize(rt_vars->win_ptr, &rt_vars->win_width, 
                                             &rt_vars->win_height);
-    // glClearColor(0, 0, 0, 0xff);
-    // glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(0, 0, 0, 0xff);
+    glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     glfwSwapBuffers(rt_vars->win_ptr);
