@@ -35,6 +35,6 @@ usage:
 
 thanks to mastermind graphix designer Karkagami for the icon
 
-dependencies:
+dependencies (included):
     imgui
     glfw3

@@ -1,15 +1,4 @@
 
-/*
-TODO:
-finish the default output path stuff
-
-TODO: 
-improve ux
-
-TODO: 
-make it possible to edit preset names and shit 
-*/
-
 #include "2pacmpeg.h"
 
 inline void *
