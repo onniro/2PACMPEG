@@ -41,13 +41,13 @@
         folder of the ffmpeg executable
     -   click on start to launch FFmpeg 
 
-4. build dependencies 
+3. build dependencies 
     - clang++ for x86_64 with windows headers and libs (i use ucrt but probably doesnt matter tbh)
       (e.g https://github.com/mstorsjo/llvm-mingw/releases/tag/20240619)
     - imgui (included)
     - glfw3 (included)
 
-5. credits 
+4. credits 
     thanks to mastermind graphix designer Karkagami for the icon <3
     glfw3 - window creation and rendering backend for imgui
     imgui - gui toolkit
