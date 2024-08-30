@@ -1,11 +1,19 @@
 2PACMPEG - cool front-end for FFmpeg
 
-installation for 2PACMPEG_with_FFmpeg
+0. some yapping
+    the main motivation behind the authoring of this program is to make 
+    it easier and faster to do some processing on shadowplay clips 
+    and whatnot such that me and some friends can upload them to discord
+    without having to subscribe to discord nitro (waste of money). 
+    such processing includes and is usually limited to compressing the
+    clip to under 25MB and merging of multiple audio tracks.
+
+1.1 installation for 2PACMPEG_with_FFmpeg
     step 1: download the archive where it says "2PACMPEG_with_FFmpeg" from 
             https://github.com/onniro/2PACMPEG/releases
     step 2: unpack the archive 
 
-installation for 2PACMPEG_no_FFmpeg
+1.2 installation for 2PACMPEG_no_FFmpeg
     step 1: obtain copies of the FFmpeg binaries (namely ffmpeg and ffprobe)
     step 2: follow the instructions in "installation for 2PACMPEG_with_FFmpeg", 
             but instead of downloading 2PACMPEG_with_FFmpeg, download 
@@ -14,7 +22,7 @@ installation for 2PACMPEG_no_FFmpeg
     step 4: make a folder there with the name ffmpeg
     step 5: copy (or move) the ffmpeg and ffprobe executables into that folder 
 
-usage:
+2. usage:
     -   go to the folder where you unpacked the archive and click on where 
         it says 2PACMPEG.EXE
     -   click on "select input file" to select input file (or type/paste in the path 2 tha file)
@@ -33,8 +41,14 @@ usage:
         folder of the ffmpeg executable
     -   click on start to launch FFmpeg 
 
-thanks to mastermind graphix designer Karkagami for the icon
+4. build dependencies 
+    - clang++ for x86_64 with windows headers and libs (i use ucrt but probably doesnt matter tbh)
+      (e.g https://github.com/mstorsjo/llvm-mingw/releases/tag/20240619)
+    - imgui (included)
+    - glfw3 (included)
 
-dependencies (included):
-    imgui
-    glfw3
+5. credits 
+    thanks to mastermind graphix designer Karkagami for the icon <3
+    glfw3 - window creation and rendering backend for imgui
+    imgui - gui toolkit
+

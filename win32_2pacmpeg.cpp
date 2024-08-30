@@ -50,10 +50,12 @@ platform_thread_read_stdout(void *thread_args_voidptr) {
     win32_thread_args *thread_args = (win32_thread_args *)thread_args_voidptr;
 
     for(;;) {
-        DWORD line_buffer_size;
+        DWORD line_buffer_size; //NOTE: intended to be outside of the loop?
         if(ReadFile(thread_args->_thread_info->read_handle,
                 thread_args->_tbuf_group->stdout_line_buffer,
-                PMEM_STDOUTLINEBUFFERSIZE, &line_buffer_size, 0)) {
+                PMEM_STDOUTLINEBUFFERSIZE, 
+                &line_buffer_size, 
+                0)) {
             strcat(thread_args->_tbuf_group->stdout_buffer,
                 thread_args->_tbuf_group->stdout_line_buffer);
         } 
@@ -145,8 +147,8 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
 #if 1
 INTERNAL wchar_t *
 platform_file_input_dialog(wchar_t *output_buffer) {
-    HRESULT result = CoInitializeEx(0, COINIT_APARTMENTTHREADED  
-                                       | COINIT_DISABLE_OLE1DDE);
+    HRESULT result = CoInitializeEx(0, COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
+
     if(SUCCEEDED(result)) {
         IFileOpenDialog *file_dialog;
         result = CoCreateInstance(CLSID_FileOpenDialog, 0, CLSCTX_ALL,
