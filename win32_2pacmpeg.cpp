@@ -316,8 +316,11 @@ WinMain(HINSTANCE instance, HINSTANCE,
     ImGui_ImplOpenGL3_Init("#version 130");
 
     if(!strstr(cmd_args, "--use-bitmap-font")) {
-        rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\lucon.ttf",
-                                    13.0f, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+        //TODO resolve font path dynamically
+        if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) {
+            rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\lucon.ttf",
+                                        13.0f, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+        }
     }
 
     program_memory p_memory = {0};

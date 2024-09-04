@@ -1,4 +1,7 @@
 /clang_build
+/clang_build_linux
+/imgui_o_files
+/imgui_o_files_linux
 /release
 /source_zips
 /release_zips
