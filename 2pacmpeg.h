@@ -8,10 +8,18 @@
 #define GL_SILENCE_DEPRECATION
 #if _2PACMPEG_WIN32
     #define GLFW_EXPOSE_NATIVE_WIN32
+#elif _2PACMPEG_LINUX
+    #define GLFW_EXPOSE_NATIVE_X11
 #endif
 
-#include "GLFW\glfw3.h"
-#include "GLFW\glfw3native.h"
+//fr?
+#if _2PACMPEG_WIN32
+    #include "GLFW\glfw3.h"
+    #include "GLFW\glfw3native.h"
+#else
+    #include "GLFW/glfw3.h"
+    #include "GLFW/glfw3native.h"
+#endif
 
 #include "thangz.h"
 

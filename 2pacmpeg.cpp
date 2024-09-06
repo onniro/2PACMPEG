@@ -42,6 +42,8 @@ load_startup_files(text_buffer_group *tbuf_group,
             tbuf_group->config_buffer, &config_size)) {
 #if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
         OutputDebugStringA("[info]: loaded startup file.\n");
+#elif _2PACMPEG_DEBUG && _2PACMPEG_LINUX
+        printf("[info]: loaded startup file.\n");
 #endif
         // can cause weird shit if the user is trying to be retarded
         s8 *default_dir_ptr = strchr(tbuf_group->config_buffer,
@@ -210,11 +212,21 @@ serialize_preset(s8 *preset_name, s8 *preset_command,
 #endif
     } 
     else {
+        //TODO: why the fuck is there a separate buffer for this?
+#if _2PACMPEG_WIN32
         char __diagnostic[128];
         sprintf(__diagnostic, 
                 "[file write error]: could not write preset file %i",
                 GetLastError());
         log_diagnostic(__diagnostic,
+                        last_diagnostic_type::error,
+                        tbuf_group);
+#else
+        //NOTE: untested
+        strcpy("[file write error]: could not write preset file ", 
+                tbuf_group->diagnostic_buffer);
+#endif
+        log_diagnostic(tbuf_group->diagnostic_buffer,
                         last_diagnostic_type::error,
                         tbuf_group);
     }
@@ -261,10 +273,12 @@ remove_preset(preset_table *p_table,
         log_diagnostic("[config error]: something weird happened.",
                         last_diagnostic_type::error,
                         tbuf_group);
+#if _2PACMPEG_WIN32
         MessageBoxA(0, 
                     "Failed to retrieve the length of the command.\n(You can continue using the program normally, but the preset could not be deleted)",
                     "CONFIG ERROR",
                     MB_OK|MB_ICONERROR);
+#endif
 
         return;
     }
@@ -311,6 +325,7 @@ remove_preset(preset_table *p_table,
 #endif
     } 
     else {
+#if _2PACMPEG_WIN32 && _2PACMPEG_DEBUG
         char __diagnostic[512];
         snprintf(__diagnostic, 512,
                 "[error]: updating configuration failed with code %i",
@@ -318,6 +333,14 @@ remove_preset(preset_table *p_table,
         log_diagnostic(__diagnostic,
                             last_diagnostic_type::error,
                             tbuf_group);
+#elif _2PACMPEG_LINUX && _2PACMPEG_DEBUG
+        strcpy("[error]: updating configuration failed",
+                tbuf_group->diagnostic_buffer);
+        tbuf_group->diagnostic_buffer[strlen(tbuf_group->diagnostic_buffer)] = 0x0;
+        log_diagnostic(tbuf_group->diagnostic_buffer,
+                            last_diagnostic_type::error,
+                            tbuf_group);
+#endif
     }
 }
 
@@ -365,6 +388,7 @@ basic_controls_update(text_buffer_group *tbuf_group,
 
     ImGui::PushItemWidth(ImGui::GetColumnWidth(-1) - 15.0f);
 
+#if _2PACMPEG_WIN32
     if(ImGui::Button("select input file")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
@@ -372,8 +396,9 @@ basic_controls_update(text_buffer_group *tbuf_group,
         wcstombs(tbuf_group->input_path_buffer,
                 tbuf_group->wchar_input_buffer, PMEM_INPUTPATHBUFFERSIZE);
     }
-
     ImGui::SameLine();
+#endif
+
     if(ImGui::Button("clear##clear_path")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
@@ -552,8 +577,6 @@ basic_controls_update(text_buffer_group *tbuf_group,
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
         if(rt_vars->ffmpeg_is_running) {
-        // TODO: abstract to platform-specific file(s) (?)
-
             if(platform_kill_process(thread_info)) {
                 rt_vars->ffmpeg_is_running = false;
 
