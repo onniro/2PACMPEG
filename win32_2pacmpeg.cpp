@@ -1,7 +1,14 @@
 
+#undef _2PACMPEG_LINUX
+#if !defined(_2PACMPEG_WIN32)
+    #define _2PACMPEG_WIN32 1
+#endif
+
+#define WIN32_LEAN_AND_MEAN
 #include "windows.h"
 #include "shobjidl.h"
 #include "shlwapi.h"
+#include "timeapi.h"
 
 #include "stdio.h"
 
@@ -11,10 +18,10 @@
 
 #include "2pacmpeg.cpp"
 
-INTERNAL void *
-platform_make_heap_buffer(program_memory *target, u64 pool_size) {
+INTERNAL void *platform_make_heap_buffer(program_memory *target, 
+                                        u64 pool_size) {
     target->memory = VirtualAlloc(0, pool_size, 
-                                   MEM_RESERVE | MEM_COMMIT,
+                                   MEM_RESERVE|MEM_COMMIT,
                                    PAGE_READWRITE);
     target->write_ptr = target->memory;
     target->capacity = pool_size;
@@ -22,8 +29,7 @@ platform_make_heap_buffer(program_memory *target, u64 pool_size) {
     return target->memory;
 }
 
-INTERNAL void
-platform_init_threading(platform_thread_info *thread_info) {
+INTERNAL void platform_init_threading(platform_thread_info *thread_info) {
     thread_info->cmd_stream_attribs.nLength = sizeof(SECURITY_ATTRIBUTES);
     thread_info->cmd_stream_attribs.bInheritHandle = TRUE;
 
@@ -45,30 +51,56 @@ platform_init_threading(platform_thread_info *thread_info) {
 #endif
 }
 
-DWORD __stdcall
-platform_thread_read_stdout(void *thread_args_voidptr) {
+DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
     win32_thread_args *thread_args = (win32_thread_args *)thread_args_voidptr;
 
-    for(;;) {
-        DWORD line_buffer_size; //NOTE: intended to be outside of the loop?
-        if(ReadFile(thread_args->_thread_info->read_handle,
-                thread_args->_tbuf_group->stdout_line_buffer,
-                PMEM_STDOUTLINEBUFFERSIZE, 
-                &line_buffer_size, 
-                0)) {
-            strcat(thread_args->_tbuf_group->stdout_buffer,
-                thread_args->_tbuf_group->stdout_line_buffer);
-        } 
-        else {
-            break;
+    //bit verbose but aight
+    switch(*thread_args->_prog_enum) {
+    case ffmpeg: {
+        for(;;) {
+            DWORD line_buffer_size;
+            if(ReadFile(thread_args->_thread_info->read_handle,
+                    thread_args->_tbuf_group->stdout_line_buffer,
+                    PMEM_STDOUTLINEBUFFERSIZE, &line_buffer_size, 0)) {
+                strcat(thread_args->_tbuf_group->stdout_buffer,
+                    thread_args->_tbuf_group->stdout_line_buffer);
+            } 
+            else {
+                break;
+            }
         }
+    } break;
+
+    case ffprobe: {
+        char temp_buffer[512];
+        DWORD line_buffer_size;
+
+        for(;;) {
+            if(ReadFile(thread_args->_thread_info->read_handle,
+                    temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE, 
+                    &line_buffer_size, 0)) {
+                strncat(thread_args->_tbuf_group->ffprobe_buffer,
+                        temp_buffer, 512);
+            } 
+            else {
+                break;
+            }
+        }
+    } break;
+
+    case ffplay: {
+    } break;
+
+    case other: {
+    } break;
+
+    default: break;
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
-DWORD __stdcall 
-platform_thread_wait_for_exit(void *thread_args_voidptr) {
+DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr) {
     win32_thread_args *thread_args = (win32_thread_args *)thread_args_voidptr;
 
     thread_args->_thread_info->stdio_thread_handle = CreateThread(0, 0, 
@@ -80,23 +112,27 @@ platform_thread_wait_for_exit(void *thread_args_voidptr) {
             &thread_args->_thread_info->cmd_stream_startupinfo,
             &thread_args->_thread_info->cmd_stream_processinfo)) {
         thread_args->_rt_vars->ffmpeg_is_running = true;
-        log_diagnostic("[info]: FFmpeg started...",
+        if(*thread_args->_prog_enum == ffmpeg) {
+            log_diagnostic("[info]: FFmpeg started...",
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
+        }
 
         WaitForSingleObject(
                 thread_args->_thread_info->cmd_stream_processinfo.hProcess, 
                 INFINITE);
 
         thread_args->_rt_vars->ffmpeg_is_running = false;
-        log_diagnostic("[info]: FFmpeg finished.",
+        if(*thread_args->_prog_enum == ffmpeg) {
+            log_diagnostic("[info]: FFmpeg finished.",
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
+        }
     } 
     else {
-        log_diagnostic("[fatal error]: FFmpeg failed to start.",
-                            last_diagnostic_type::error,
-                            thread_args->_tbuf_group);
+        log_diagnostic("[fatal error]: process failed to start.",
+                        last_diagnostic_type::error,
+                        thread_args->_tbuf_group);
     }
 
     CloseHandle(thread_args->_thread_info->cmd_stream_processinfo.hThread);
@@ -106,11 +142,10 @@ platform_thread_wait_for_exit(void *thread_args_voidptr) {
     CloseHandle(thread_args->_thread_info->stdio_thread_handle);
     CloseHandle(thread_args->_thread_info->wait_thread_handle);
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
-INTERNAL bool32
-platform_kill_process(platform_thread_info *thread_info) {
+INTERNAL bool32 platform_kill_process(platform_thread_info *thread_info) {
     bool32 result = false;
     if(TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, 
             PROCESS_TERMINATE)) {
@@ -120,10 +155,9 @@ platform_kill_process(platform_thread_info *thread_info) {
     return result;
 }
 
-INTERNAL void
-platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
-                                platform_thread_info *thread_info,
-                                runtime_vars *rt_vars) {
+INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
+                                            platform_thread_info *thread_info,
+                                            runtime_vars *rt_vars) {
 #if _2PACMPEG_DEBUG
     memset(tbuf_group->temp_buffer, 0, 
             strlen(tbuf_group->temp_buffer));
@@ -138,6 +172,7 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
     thread_args._tbuf_group = tbuf_group;
     thread_args._thread_info = thread_info;
     thread_args._rt_vars = rt_vars;
+    thread_args._prog_enum = &thread_info->prog_enum;
 
     thread_info->wait_thread_handle = CreateThread(0, 0, 
                                         platform_thread_wait_for_exit, 
@@ -145,8 +180,7 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
 }
 
 #if 1
-INTERNAL wchar_t *
-platform_file_input_dialog(wchar_t *output_buffer) {
+INTERNAL wchar_t *platform_file_input_dialog(wchar_t *output_buffer) {
     HRESULT result = CoInitializeEx(0, COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
 
     if(SUCCEEDED(result)) {
@@ -178,8 +212,8 @@ platform_file_input_dialog(wchar_t *output_buffer) {
 }
 #endif
 
-INTERNAL s8 *
-platform_get_working_directory(s8 *destination, DWORD buffer_size) {
+INTERNAL s8 *platform_get_working_directory(s8 *destination, 
+                                            DWORD buffer_size) {
     s8 *result = 0;
     DWORD path_length = GetModuleFileNameA(0, destination, buffer_size);
 
@@ -195,8 +229,7 @@ platform_get_working_directory(s8 *destination, DWORD buffer_size) {
     return result;
 }
 
-inline bool32
-platform_file_exists(s8 *file_path) {
+inline bool32 platform_file_exists(s8 *file_path) {
     bool32 result = false;
     if(PathFileExistsA(file_path)) {
         result = true;
@@ -205,8 +238,7 @@ platform_file_exists(s8 *file_path) {
     return result;
 }
 
-inline bool32
-platform_directory_exists(s8 *directory_name) {
+inline bool32 platform_directory_exists(s8 *directory_name) {
     bool32 result = false;
     if(PathIsDirectoryA(directory_name)) {
         result = true;
@@ -215,8 +247,9 @@ platform_directory_exists(s8 *directory_name) {
     return result;
 }
 
-INTERNAL bool32
-platform_read_file(s8 *file_path, s8 *destination, u64 *dest_size) {
+INTERNAL bool32 platform_read_file(s8 *file_path, 
+                                    s8 *destination, 
+                                    u64 *dest_size) {
     bool32 result = false;
     HANDLE file_handle = CreateFileA(file_path, GENERIC_READ,
                                    FILE_SHARE_READ, 0, OPEN_EXISTING,
@@ -236,11 +269,11 @@ platform_read_file(s8 *file_path, s8 *destination, u64 *dest_size) {
     } 
 #if _2PACMPEG_DEBUG
     else {
-        char __diagnostic[128];
-        snprintf(__diagnostic, 128,
+        char _diagnostic[128];
+        snprintf(_diagnostic, 128,
                 "[file read error]: could not read file. error code: %i", 
                 GetLastError());
-        OutputDebugStringA(__diagnostic);
+        OutputDebugStringA(_diagnostic);
     }
 #endif
     CloseHandle(file_handle);
@@ -248,8 +281,9 @@ platform_read_file(s8 *file_path, s8 *destination, u64 *dest_size) {
     return result;
 }
 
-INTERNAL bool32
-platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_size) {
+INTERNAL bool32 platform_write_file(s8 *file_path, 
+                                    void *in_buffer, 
+                                    u32 buffer_size) {
     bool32 result = false;
     HANDLE file_handle = CreateFileA(file_path, GENERIC_WRITE,
                                     FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
@@ -273,15 +307,16 @@ platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_size) {
     return result;
 }
 
-int __stdcall
-WinMain(HINSTANCE instance, HINSTANCE,
-        char *cmd_args, int) {
+int __stdcall WinMain(HINSTANCE instance, HINSTANCE,
+                    char *cmd_args, int) {
+#if 1
 #define SCHEDULER_MS_RESOLUTION 1
     if(timeBeginPeriod(SCHEDULER_MS_RESOLUTION) == TIMERR_NOERROR) {
 #if _2PACMPEG_DEBUG
         OutputDebugStringA("[info]: set Windows scheduler granularity to 1 millisecond.\n");
 #endif
     }
+#endif
 
     if(!glfwInit()) {
         OutputDebugStringA("glfwInit() failed.\n");
@@ -305,7 +340,7 @@ WinMain(HINSTANCE instance, HINSTANCE,
     platform_thread_info thread_info = {0};
 
     glfwMakeContextCurrent(rt_vars.win_ptr);
-    glfwSwapInterval(0); // NOTE: it seems like this call was being ignored before
+    glfwSwapInterval(0); //NOTE: seems like this just doesnt work?
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
@@ -318,7 +353,7 @@ WinMain(HINSTANCE instance, HINSTANCE,
     ImGui_ImplOpenGL3_Init("#version 130");
 
     if(!strstr(cmd_args, "--use-bitmap-font")) {
-        //TODO resolve font path dynamically
+        //TODO resolve font path dynamically since this might cause problems
         if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) {
             rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\lucon.ttf",
                                         13.0f, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
@@ -349,23 +384,20 @@ WinMain(HINSTANCE instance, HINSTANCE,
         tbuf_group.default_path_buffer[0] = 0x0;
     }
 
-    s8 __diagnostic_buffer[512];
-    tbuf_group.diagnostic_buffer = __diagnostic_buffer;
-    if(tbuf_group.diagnostic_buffer) {
-        tbuf_group.diagnostic_buffer[0] = 0x0;
-    }
+    s8 _diagnostic_buffer[512] = {0};
+    s8 _ffprobe_buffer[512] = {0};
+    tbuf_group.diagnostic_buffer = _diagnostic_buffer;
+    tbuf_group.ffprobe_buffer = _ffprobe_buffer;
 
     tbuf_group.working_directory =  (s8 *)heapbuf_alloc_region(&p_memory, PMEM_WORKINGDIRSIZE);
     platform_get_working_directory(tbuf_group.working_directory, 1024);
 
     if(tbuf_group.working_directory) {
+        //maybe should get rid of this as well?
         tbuf_group.config_path = (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGPATHSIZE);
-        tbuf_group.ffmpeg_path = (s8 *)heapbuf_alloc_region(&p_memory, PMEM_FFMPEGPATHSIZE);
 
         sprintf(tbuf_group.config_path, 
                 "%sPRESETFILE", tbuf_group.working_directory);
-        sprintf(tbuf_group.ffmpeg_path, 
-                "%sffmpeg\\ffmpeg.exe", tbuf_group.working_directory);
     }
 
     preset_table p_table = {0};
@@ -380,15 +412,15 @@ WinMain(HINSTANCE instance, HINSTANCE,
                     (LONG_PTR)LoadIcon(GetModuleHandle(0), MAKEINTRESOURCE(__ICON_ID)));
 #endif
 
-#if defined(_2PACMPEG_DEBUG)
+#if _2PACMPEG_DEBUG
     OutputDebugStringA(" -- TRACELOG START -- \n");
     sprintf(tbuf_group.temp_buffer, 
-            "memory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\nffmpeg_path:%s\n", 
+            "memory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\nffmpeg_path:%sffmpeg\\ffmpeg.exe\n", 
             ((f32)(((u64)p_memory.write_ptr - (u64)p_memory.memory )) / 1024.0f / 1024.0f), 
             ((f32)p_memory.capacity) / 1024.0f / 1024.0f,
             tbuf_group.working_directory,
             tbuf_group.config_path,
-            tbuf_group.ffmpeg_path);
+            tbuf_group.working_directory);
 
     OutputDebugStringA(tbuf_group.temp_buffer);
     memset(tbuf_group.temp_buffer, 0, strlen(tbuf_group.temp_buffer));

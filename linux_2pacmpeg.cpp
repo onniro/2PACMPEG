@@ -217,12 +217,12 @@ main(int arg_count, char **args)
 
     if(tbuf_group.working_directory) {
         tbuf_group.config_path = (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGPATHSIZE);
-        tbuf_group.ffmpeg_path = (s8 *)heapbuf_alloc_region(&p_memory, PMEM_FFMPEGPATHSIZE);
+        //tbuf_group.ffmpeg_path = (s8 *)heapbuf_alloc_region(&p_memory, PMEM_FFMPEGPATHSIZE);
 
         sprintf(tbuf_group.config_path, 
                 "%sPRESETFILE", tbuf_group.working_directory);
-        sprintf(tbuf_group.ffmpeg_path, 
-                "%sffmpeg\\ffmpeg.exe", tbuf_group.working_directory);
+        //sprintf(tbuf_group.ffmpeg_path, 
+        //        "%sffmpeg\\ffmpeg.exe", tbuf_group.working_directory);
     }
 
     preset_table p_table = {0};

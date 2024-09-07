@@ -12,14 +12,8 @@
     #define GLFW_EXPOSE_NATIVE_X11
 #endif
 
-//fr?
-#if _2PACMPEG_WIN32
-    #include "GLFW\glfw3.h"
-    #include "GLFW\glfw3native.h"
-#else
-    #include "GLFW/glfw3.h"
-    #include "GLFW/glfw3native.h"
-#endif
+#include "GLFW/glfw3.h"
+#include "GLFW/glfw3native.h"
 
 #include "thangz.h"
 
@@ -41,8 +35,9 @@
 #define PMEM_CONFIGPATHSIZE KILOBYTES((u64)2)
 #define PMEM_FFMPEGPATHSIZE KILOBYTES((u64)2)
 
+#define SMALL_TEXTBUF_SIZE 32
+
 // // NOTE: max amount of insertions is 1000
-// #define PMEM_PRESETTABLESIZE (sizeof(s8 *) * 200)
 
 #define MAX_PRESETS 1000
 #define PRESETNAME_PITCH 64
@@ -62,15 +57,20 @@ struct runtime_vars {
     int win_height;
     GLFWwindow *win_ptr;
     bool32 ffmpeg_is_running;
-#if 1
     ImFont *default_font;
-#endif
 };
 
 enum last_diagnostic_type {
     undefined = 0,
     error, 
     info
+};
+
+enum program_enum {
+    ffmpeg = 0,
+    ffprobe,
+    ffplay,
+    other
 };
 
 struct text_buffer_group {
@@ -88,15 +88,16 @@ struct text_buffer_group {
 
     s8 *working_directory;
     s8 *config_path;
-    s8 *ffmpeg_path;
+    s8 *ffmpeg_path; //deprecated basically (use working_directory and append ffmpeg\ffmpeg.exe)
 
-    s8 *diagnostic_buffer; // NOTE: stack allocated
+    s8 *diagnostic_buffer;
+    s8 *ffprobe_buffer;
 };
 
 struct preset_table {
     int entry_amount;
     int capacity;
-    s8 **command_table;
+    s8 **command_table; //array of pointers that all point to places in text_buffer_group::config_buffer
     s8 *name_array;
 };
 
@@ -104,8 +105,8 @@ struct platform_thread_info;
 
  //////////////////////
 
+inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
 INTERNAL last_diagnostic_type log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);
-inline void * heapbuf_alloc_region(program_memory *pool, u64 region_size);
 INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table);
 inline void adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index, int subtract_from_ceil);
 INTERNAL void save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table);
@@ -115,6 +116,9 @@ inline int command_length(s8 *command_begin);
 INTERNAL void remove_preset(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index);
 inline bool32 check_duplicate_presetname(preset_table *p_table, s8 *p_name);
 inline void strip_end_filename(s8 *file_path);
+INTERNAL void argument_options_calculate_bitrate(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info, char *target_filesize_buffer, char *bitrate_buf);
+INTERNAL void argument_options_count_audio_tracks(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info, char *target_filesize_buffer, char *bitrate_buf);
+INTERNAL void argument_options(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info, char *target_filesize_buffer, char *bitrate_buf);
 INTERNAL void basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars, platform_thread_info *thread_info);
 INTERNAL void preset_list_update(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars);
 INTERNAL void update_window(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars, platform_thread_info *thread_info);

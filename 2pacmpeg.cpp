@@ -1,8 +1,14 @@
+/*
+FIXME: so.. fvcking.. many.. #ifs...
+TODO: go through and remove spaghetti code
+TODO: use ffprobe to find encoding bitrate (and auto-insert it to the arg line?)
+TODO: also ffprobe other shit like the amount of audio tracks
+*/
 
 #include "2pacmpeg.h"
 
-inline void *
-heapbuf_alloc_region(program_memory *pool, u64 region_size) {
+inline void *heapbuf_alloc_region(program_memory *pool, 
+                                u64 region_size) {
     void *result = 0;
     u64 free_memory = ((u64)pool->memory + pool->capacity) -
                            (u64)pool->write_ptr;
@@ -14,10 +20,9 @@ heapbuf_alloc_region(program_memory *pool, u64 region_size) {
     return result;
 }
 
-INTERNAL last_diagnostic_type
-log_diagnostic(s8 *message = 0, 
-                last_diagnostic_type type = undefined,
-                text_buffer_group *tbuf_group = 0) {
+INTERNAL last_diagnostic_type log_diagnostic(s8 *message,
+                                            last_diagnostic_type type,
+                                            text_buffer_group *tbuf_group) {
     LOCAL_STATIC last_diagnostic_type last_diagnostic = undefined;
     
     if(message && tbuf_group) {
@@ -34,16 +39,17 @@ log_diagnostic(s8 *message = 0,
     return last_diagnostic;
 }
 
-INTERNAL void
-load_startup_files(text_buffer_group *tbuf_group, 
-                    preset_table *p_table) {
+INTERNAL void load_startup_files(text_buffer_group *tbuf_group, 
+                                preset_table *p_table) {
     u64 config_size;
     if(platform_read_file(tbuf_group->config_path, 
             tbuf_group->config_buffer, &config_size)) {
-#if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
+#if _2PACMPEG_DEBUG
+    #if _2PACMPEG_WIN32
         OutputDebugStringA("[info]: loaded startup file.\n");
-#elif _2PACMPEG_DEBUG && _2PACMPEG_LINUX
+    #else
         printf("[info]: loaded startup file.\n");
+    #endif
 #endif
         // can cause weird shit if the user is trying to be retarded
         s8 *default_dir_ptr = strchr(tbuf_group->config_buffer,
@@ -69,16 +75,24 @@ load_startup_files(text_buffer_group *tbuf_group,
                     ++p_table->entry_amount;
                 } 
                 else {
-#if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
+#if _2PACMPEG_DEBUG
+    #if _2PACMPEG_WIN32
                     OutputDebugStringA("[exception]: expected preset command token after name token, found 2 names back-to-back.\n");
+    #else
+                    fprintf(stderr, "[exception]: expected preset command token after name token, found 2 names back-to-back.\n");
+    #endif
 #endif
 
                     break;
                 }
             } 
             else {
-#if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
+#if _2PACMPEG_DEBUG
+    #if _2PACMPEG_WIN32
                 OutputDebugStringA("[info]: finished parsing preset file.\n");
+    #else
+                printf("[info]: finished parsing preset file.\n");
+    #endif
 #endif
                 break;
             }
@@ -96,23 +110,25 @@ load_startup_files(text_buffer_group *tbuf_group,
         log_diagnostic("[info]: preset file doesn't exist or couldn't be loaded.",
                         last_diagnostic_type::undefined,
                         tbuf_group);
-#if _2PACMPEG_DEBUG && _2PACMPEG_WIN32
+
+#if _2PACMPEG_DEBUG
+    #if _2PACMPEG_WIN32
         OutputDebugStringA("[info]: error loading startup file.\n");
+    #else
+        printf("[info]: error loading startup file.\n");
+    #endif
 #endif
     }
 }
 
-// i think this can get really slow
-inline void
-adjust_pointer_table(preset_table *p_table, 
-                    text_buffer_group *tbuf_group, 
-                    int rm_index = 0, 
-                    int subtract_from_ceil = 0) {
+//not really sure how slow this can get
+inline void adjust_pointer_table(preset_table *p_table, 
+                                text_buffer_group *tbuf_group, 
+                                int rm_index = 0, 
+                                int subtract_from_ceil = 0) {
     for(int move_index = rm_index;
             move_index < p_table->entry_amount - subtract_from_ceil;
             ++move_index) {
-        // checking for null before incrementing so that the pointers 
-        // remain completely null if strchr doesn't find them 
         if(!move_index) {
             p_table->command_table[0] = 
                 strchr(tbuf_group->config_buffer, TOKEN_PRESETCMD);
@@ -133,9 +149,8 @@ adjust_pointer_table(preset_table *p_table,
     }
 }
 
-INTERNAL void
-save_default_output_path(text_buffer_group *tbuf_group, 
-                        preset_table *p_table) {
+INTERNAL void save_default_output_path(text_buffer_group *tbuf_group, 
+                                        preset_table *p_table) {
     s8 *default_dir_begin;
 
     if(platform_file_exists(tbuf_group->config_path)) {
@@ -187,9 +202,9 @@ save_default_output_path(text_buffer_group *tbuf_group,
     }
 }
 
-INTERNAL bool32
-serialize_preset(s8 *preset_name, s8 *preset_command,
-                text_buffer_group *tbuf_group) {
+INTERNAL bool32 serialize_preset(s8 *preset_name, 
+                                s8 *preset_command,
+                                text_buffer_group *tbuf_group) {
     memset(tbuf_group->temp_buffer, 0, strlen(tbuf_group->temp_buffer));
 
     snprintf(tbuf_group->temp_buffer,
@@ -208,11 +223,15 @@ serialize_preset(s8 *preset_name, s8 *preset_command,
                         last_diagnostic_type::info,
                         tbuf_group);
 #if _2PACMPEG_DEBUG
+    #if _2PACMPEG_WIN32
         OutputDebugStringA("[info]: configuration updated. (preset added).\n");
+    #else
+        printf("[info]: configuration updated. (preset added).\n");
+    #endif
 #endif
     } 
     else {
-        //TODO: why the fuck is there a separate buffer for this?
+        //?????????++
 #if _2PACMPEG_WIN32
         char __diagnostic[128];
         sprintf(__diagnostic, 
@@ -234,19 +253,19 @@ serialize_preset(s8 *preset_name, s8 *preset_command,
     return result;
 }
 
-// NOTE: preset_name can be a pointer to a buffer that might not be null-terminated
-inline void
-insert_preset_name(preset_table *p_table, s8 *preset_name,
-                int preset_name_length, int insert_index) {
-    // NOTE: 64 byte pitch for names
+//NOTE: preset_name might not be null-terminated
+inline void insert_preset_name(preset_table *p_table, 
+                                s8 *preset_name,
+                                int preset_name_length, 
+                                int insert_index) {
+    //NOTE: 64 byte pitch for names
     int insert_offset = PRESETNAME_PITCH*insert_index;
 
     strncpy(p_table->name_array + insert_offset,
             preset_name, preset_name_length);
 }
 
-inline int
-command_length(s8 *command_begin) {
+inline int command_length(s8 *command_begin) {
     int result = -1;
     s8 *command_end = strchr(command_begin, (s8)'\n');
 
@@ -260,15 +279,14 @@ command_length(s8 *command_begin) {
     return result;
 }
 
-INTERNAL void 
-remove_preset(preset_table *p_table, 
-            text_buffer_group *tbuf_group, 
-            int rm_index) {
-    // CLEANUP
+INTERNAL void remove_preset(preset_table *p_table, 
+                            text_buffer_group *tbuf_group, 
+                            int rm_index) {
+    //CLEANUP
     s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index * PRESETNAME_PITCH)))) - 2;
     u32 preset_length = command_length(whole_preset) + 1; // +1 for \n
 
-    // why even check for this?
+    //NOTE: this shit will never happen and i dont know why i wrote it but might as well leave it in as an easter egg lmao
     if(preset_length == -1) {
         log_diagnostic("[config error]: something weird happened.",
                         last_diagnostic_type::error,
@@ -320,33 +338,30 @@ remove_preset(preset_table *p_table,
         log_diagnostic("[info]: configuration updated. (preset deleted)",
                         last_diagnostic_type::info,
                         tbuf_group);
-#if _2PACMPEG_DEBUG
-        OutputDebugStringA("[info]: configuration updated. (preset deleted)\n");
-#endif
     } 
     else {
-#if _2PACMPEG_WIN32 && _2PACMPEG_DEBUG
+#if _2PACMPEG_WIN32
         char __diagnostic[512];
         snprintf(__diagnostic, 512,
                 "[error]: updating configuration failed with code %i",
                 GetLastError());
         log_diagnostic(__diagnostic,
-                            last_diagnostic_type::error,
-                            tbuf_group);
-#elif _2PACMPEG_LINUX && _2PACMPEG_DEBUG
+                        last_diagnostic_type::error,
+                        tbuf_group);
+#else
         strcpy("[error]: updating configuration failed",
                 tbuf_group->diagnostic_buffer);
         tbuf_group->diagnostic_buffer[strlen(tbuf_group->diagnostic_buffer)] = 0x0;
         log_diagnostic(tbuf_group->diagnostic_buffer,
-                            last_diagnostic_type::error,
-                            tbuf_group);
+                        last_diagnostic_type::error,
+                        tbuf_group);
 #endif
     }
 }
 
-// NOTE: a little slow
-inline bool32
-check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
+// NOTE: a little slow i think
+inline bool32 check_duplicate_presetname(preset_table *p_table, 
+                                        s8 *p_name) {
     for(int name_index = 0;
             name_index < p_table->entry_amount;
             ++name_index) {
@@ -359,8 +374,7 @@ check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
     return false;
 }
 
-inline void
-strip_end_filename(s8 *file_path) {
+inline void strip_end_filename(s8 *file_path) {
     int length = strlen(file_path);
 
     for(int char_index = length - 1;
@@ -378,17 +392,180 @@ strip_end_filename(s8 *file_path) {
     }
 }
 
-INTERNAL void
-basic_controls_update(text_buffer_group *tbuf_group, 
-                    preset_table *p_table, 
-                    runtime_vars *rt_vars, 
-                    platform_thread_info *thread_info) {
-    LOCAL_STATIC s8 preset_name_buffer[PRESETNAME_PITCH - 1] = {0}; // -1 for '\0'
+INTERNAL void argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
+                                                runtime_vars *rt_vars,
+                                                platform_thread_info *thread_info,
+                                                char *target_filesize_buffer,
+                                                char *bitrate_buf) {
+#define BITRATE_RESULT_BUFSIZE 128
+    LOCAL_STATIC char bitrate_result_buffer[BITRATE_RESULT_BUFSIZE] = {0};
+
+    ImGui::PushItemWidth(48.0f);
+
+    ImGui::Text("target file size (MB):");
+    ImGui::SameLine();
+    ImGui::InputText("##target_filesize", target_filesize_buffer, SMALL_TEXTBUF_SIZE);
+
+    ImGui::SameLine();
+    if(ImGui::Button("calculate bitrate##calculate_bitrate")) {
+        if(!rt_vars->ffmpeg_is_running) {
+            if(tbuf_group->input_path_buffer[0]) {
+                if(target_filesize_buffer[0]) {
+                    memset(tbuf_group->command_buffer, 0, strlen(tbuf_group->command_buffer));
+                    memset(tbuf_group->ffprobe_buffer, 0, strlen(tbuf_group->ffprobe_buffer));
+                    memset(bitrate_buf, 0, strlen(bitrate_buf));
+
+                    snprintf(tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
+                            "%sffmpeg\\ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 \"%s\"",
+                            tbuf_group->working_directory, tbuf_group->input_path_buffer);
+
+                    thread_info->prog_enum = ffprobe;
+                    rt_vars->ffmpeg_is_running = true; //NOTE: has to be set beforehand, otherwise the main thread will continue too early
+                    platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars);
+
+                    //TODO: try not to block the main thread
+                    while(rt_vars->ffmpeg_is_running);
+
+                    f32 media_duration = atof(tbuf_group->ffprobe_buffer);
+#if false
+                    char _thing[256];
+                    sprintf(_thing, 
+                            "media_duration=%f\nffmpeg_is_running=%i\nffprobe_buffer:%s\n",
+                            media_duration, rt_vars->ffmpeg_is_running, tbuf_group->ffprobe_buffer);
+                    OutputDebugStringA(_thing);
+#endif
+                    if(media_duration) {
+                        f32 bitrate_kb = (atof(target_filesize_buffer)*8000.0f) /
+                                            media_duration;
+                        sprintf(bitrate_result_buffer, 
+                                "-b:v %.0fk", bitrate_kb);
+
+                        log_diagnostic("[info]: ffprobe finished.", last_diagnostic_type::info, tbuf_group);
+                    }
+                    else {
+                        tbuf_group->ffprobe_buffer[0] = 0x0;
+
+                        log_diagnostic("failed to retrieve media stream duration.", last_diagnostic_type::error, tbuf_group);
+                    }
+                }
+                else {
+                    log_diagnostic("no target file size set.", last_diagnostic_type::error, tbuf_group);
+                }
+            }
+            else {
+                log_diagnostic("no input file specified.", last_diagnostic_type::error, tbuf_group);
+            }
+        }
+        else {
+            log_diagnostic("wait for running process to finish.", last_diagnostic_type::error, tbuf_group);
+        }
+    }
+
+    ImGui::SameLine();
+    ImGui::Text("result (KiB/s):");
+    ImGui::SameLine();
+    ImGui::PopItemWidth();
+
+    ImGui::PushItemWidth(128.0f);
+    ImGui::InputText("##bitrate_result", 
+                    bitrate_result_buffer,
+                    BITRATE_RESULT_BUFSIZE,
+                    ImGuiInputTextFlags_ReadOnly);
+
+    ImGui::PopItemWidth();
+}
+
+//ffprobe <input> -show_entries format=nb_streams -v 0 -of compact=p=0:nk=1
+INTERNAL void argument_options_count_audio_tracks(text_buffer_group *tbuf_group,
+                                                runtime_vars *rt_vars,
+                                                platform_thread_info *thread_info,
+                                                char *target_filesize_buffer,
+                                                char *bitrate_buf) {
+#define AUDIO_TRACK_COUNT_BUFSIZE 16
+    LOCAL_STATIC char audio_track_count_buf[AUDIO_TRACK_COUNT_BUFSIZE] = {0};
+
+    if(ImGui::Button("count audio tracks##count_audio_tracks")) {
+        if(!rt_vars->ffmpeg_is_running) {
+            if(tbuf_group->input_path_buffer[0]) {
+                memset(tbuf_group->command_buffer, 0, strlen(tbuf_group->command_buffer));
+                memset(tbuf_group->ffprobe_buffer, 0, strlen(tbuf_group->ffprobe_buffer));
+
+                snprintf(tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
+                       "%sffmpeg\\ffprobe \"%s\" -show_entries format=nb_streams -v 0 -of compact=p=0:nk=1",
+                       tbuf_group->working_directory, tbuf_group->input_path_buffer);
+
+                thread_info->prog_enum = ffprobe;
+                rt_vars->ffmpeg_is_running = true;
+                platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars);
+
+                while(rt_vars->ffmpeg_is_running);
+
+                if(atoi(tbuf_group->ffprobe_buffer)) {
+                    strncpy(audio_track_count_buf, 
+                            tbuf_group->ffprobe_buffer,
+                            AUDIO_TRACK_COUNT_BUFSIZE);
+
+                    log_diagnostic("[info]: ffprobe finished.", last_diagnostic_type::info, tbuf_group);
+                }
+                else {
+                    tbuf_group->ffprobe_buffer[0] = 0x0;
+
+                    log_diagnostic("failed to retrieve audio track count.", last_diagnostic_type::error, tbuf_group);
+                }
+            }
+            else {
+                log_diagnostic("no input file specified.", last_diagnostic_type::error, tbuf_group);
+            }
+        }
+        else {
+            log_diagnostic("wait for running process to finish.", last_diagnostic_type::error, tbuf_group);
+        }
+    }
+    ImGui::SameLine();
+    ImGui::Text("result:");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(64.0f);
+
+    ImGui::InputText("##audio_track_count_result",
+                    audio_track_count_buf, AUDIO_TRACK_COUNT_BUFSIZE,
+                    ImGuiInputTextFlags_ReadOnly);
+
+    ImGui::PopItemWidth();
+    
+}
+
+INTERNAL void argument_options(text_buffer_group *tbuf_group,
+                                runtime_vars *rt_vars,
+                                platform_thread_info *thread_info,
+                                char *target_filesize_buffer,
+                                char *bitrate_buf) {
+    argument_options_calculate_bitrate(tbuf_group,
+                                        rt_vars,
+                                        thread_info,
+                                        target_filesize_buffer,
+                                        bitrate_buf);
+
+    argument_options_count_audio_tracks(tbuf_group,
+                                        rt_vars,
+                                        thread_info,
+                                        target_filesize_buffer,
+                                        bitrate_buf);
+}
+
+INTERNAL void basic_controls_update(text_buffer_group *tbuf_group, 
+                                    preset_table *p_table, 
+                                    runtime_vars *rt_vars, 
+                                    platform_thread_info *thread_info) {
+    LOCAL_STATIC s8 preset_name_buffer[PRESETNAME_PITCH - 1] = {0};
+    LOCAL_STATIC s8 target_filesize_buffer[SMALL_TEXTBUF_SIZE];
+    LOCAL_STATIC s8 bitrate_buffer[SMALL_TEXTBUF_SIZE];
     LOCAL_STATIC last_diagnostic_type diagnostic_type = undefined;
+    LOCAL_STATIC bool32 arg_options_visible = false;
 
     ImGui::PushItemWidth(ImGui::GetColumnWidth(-1) - 15.0f);
 
 #if _2PACMPEG_WIN32
+    //NOTE: theres no equivalent on X11 so no point in even showing the button
     if(ImGui::Button("select input file")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
@@ -409,6 +586,16 @@ basic_controls_update(text_buffer_group *tbuf_group,
     ImGui::Text("input file path:");
     ImGui::InputText("##input_file_name", tbuf_group->input_path_buffer,
                                             PMEM_INPUTPATHBUFFERSIZE);
+
+    if(ImGui::Button("toggle argument options##arg_options")) {
+        arg_options_visible = ~arg_options_visible;
+    }
+
+    if(arg_options_visible) {
+        argument_options(tbuf_group, rt_vars, thread_info, 
+                        target_filesize_buffer, bitrate_buffer);
+    }
+
     ImGui::Text("args for FFmpeg:");
     ImGui::InputText("##ffmpeg_args", tbuf_group->user_cmd_buffer, PMEM_USRCOMMANDBUFFERSIZE);
 
@@ -418,7 +605,7 @@ basic_controls_update(text_buffer_group *tbuf_group,
         if(p_table->entry_amount < MAX_PRESETS) {
             if(strlen(preset_name_buffer) > 0) {
                 if(!check_duplicate_presetname(p_table, preset_name_buffer)) {
-                    // @CLEANUP
+                    //CLEANUP
                     s8 *new_cmd_start = tbuf_group->config_buffer +
                                         strlen(tbuf_group->config_buffer);
 
@@ -468,6 +655,7 @@ basic_controls_update(text_buffer_group *tbuf_group,
                     tbuf_group->output_path_buffer,
                     PMEM_OUTPUTPATHBUFFERSIZE);
 
+    //what?
 #define DEFAULT_OUTPUT_FOLDER_BUTTON 0
 #if DEFAULT_OUTPUT_FOLDER_BUTTON
     if(ImGui::Button("to default output folder")) {
@@ -490,7 +678,7 @@ basic_controls_update(text_buffer_group *tbuf_group,
                         tbuf_group->default_path_buffer,
                         PMEM_OUTPUTPATHBUFFERSIZE);
             }
-        }
+        } 
         else {
             log_diagnostic("default output directory not set",
                                 last_diagnostic_type::error,
@@ -520,31 +708,42 @@ basic_controls_update(text_buffer_group *tbuf_group,
                 memset(tbuf_group->stdout_buffer, 0, strlen(tbuf_group->stdout_buffer));
                 memset(tbuf_group->stdout_line_buffer, 0, strlen(tbuf_group->stdout_line_buffer));
 
-                if(!strchr(tbuf_group->output_path_buffer, '\\') &&
-                        tbuf_group->default_path_buffer[0]) {
+                if(!strchr(
+                        tbuf_group->output_path_buffer, 
+#if _2PACMPEG_WIN32
+                        '\\'
+#else
+                        '/'
+#endif
+                        ) && tbuf_group->default_path_buffer[0]) {
                     snprintf(tbuf_group->command_buffer,
                             PMEM_COMMANDBUFFERSIZE,
-                            "%s -y -hide_banner -i \"%s\" %s \"%s\\%s\"",
-                            tbuf_group->ffmpeg_path,
+                            "%sffmpeg\\ffmpeg.exe -y -hide_banner -i \"%s\" %s \"%s\\%s\"",
+                            tbuf_group->working_directory,
                             tbuf_group->input_path_buffer,
                             tbuf_group->user_cmd_buffer,
                             tbuf_group->default_path_buffer,
                             tbuf_group->output_path_buffer);
 #if _2PACMPEG_DEBUG
+    #if _2PACMPEG_WIN32
                     OutputDebugStringA(tbuf_group->command_buffer);
                     OutputDebugStringA("\n");
+    #else
+                    printf("%s\n", tbuf_group->command_buffer);
+    #endif
 #endif
                 }
                 else {
                     snprintf(tbuf_group->command_buffer,
                             PMEM_COMMANDBUFFERSIZE,
-                            "%s -y -hide_banner -i \"%s\" %s \"%s\"",
-                            tbuf_group->ffmpeg_path,
+                            "%s\\ffmpeg\\ffmpeg.exe -y -hide_banner -i \"%s\" %s \"%s\"",
+                            tbuf_group->working_directory,
                             tbuf_group->input_path_buffer,
                             tbuf_group->user_cmd_buffer,
                             tbuf_group->output_path_buffer);
                 }
 
+                thread_info->prog_enum = ffmpeg;
                 platform_ffmpeg_execute_command(tbuf_group,
                                                 thread_info,
                                                 rt_vars);
@@ -607,10 +806,9 @@ basic_controls_update(text_buffer_group *tbuf_group,
     ImGui::PopItemWidth();
 }
 
-INTERNAL void
-preset_list_update(text_buffer_group *tbuf_group, 
-                preset_table *p_table, 
-                runtime_vars *rt_vars) {
+INTERNAL void preset_list_update(text_buffer_group *tbuf_group, 
+                                preset_table *p_table, 
+                                runtime_vars *rt_vars) {
     ImGui::Text("presets:");
     ImGui::BeginChild("argument_presets", ImVec2((f32)ImGui::GetColumnWidth(),
                                             (f32)rt_vars->win_height - 45.0f));
@@ -646,9 +844,10 @@ preset_list_update(text_buffer_group *tbuf_group,
     ImGui::EndChild();
 }
 
-INTERNAL void
-update_window(text_buffer_group *tbuf_group, preset_table *p_table, 
-        runtime_vars *rt_vars, platform_thread_info *thread_info) {
+INTERNAL void update_window(text_buffer_group *tbuf_group, 
+                            preset_table *p_table, 
+                            runtime_vars *rt_vars, 
+                            platform_thread_info *thread_info) {
     glClearColor(0, 0, 0, 0xff);
     glClear(GL_COLOR_BUFFER_BIT);
     glfwPollEvents();
@@ -690,7 +889,7 @@ update_window(text_buffer_group *tbuf_group, preset_table *p_table,
 
     ImGui::NextColumn();
 
-    switch(log_diagnostic()) {
+    switch(log_diagnostic(0, last_diagnostic_type::undefined, 0)) {
     case error: {
         if(tbuf_group->diagnostic_buffer[0]) {
             ImGui::PushStyleColor(ImGuiCol_Text, 
