@@ -1,8 +1,19 @@
 
 #if !defined(LINUX_2PACMPEG_DOT_H)
 
-struct platform_thread_info { //TODO
+struct platform_thread_info { 
+    //TODO
+    int file_descriptor;
     FILE *read_pipe;
+    pthread_t read_thread_handle;
+    program_enum prog_enum;
+};
+
+struct linux_thread_args {
+    text_buffer_group *_tbuf_group;
+    platform_thread_info *_thread_info;
+    runtime_vars *_rt_vars;
+    program_enum *_prog_enum;
 };
 
 ////////////////////

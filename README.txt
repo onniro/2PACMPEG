@@ -1,12 +1,9 @@
 2PACMPEG - cool front-end for FFmpeg
 
-0. some yapping
-    the main motivation behind the authoring of this program is to make 
-    it easier and faster to do some processing on shadowplay clips 
-    and whatnot such that me and some friends can upload them to discord
-    without having to subscribe to discord nitro (waste of money). 
-    such processing includes and is usually limited to compressing the
-    clip to under 25MB and merging of multiple audio tracks.
+0. yapping
+    this program was written with the intention of using it to send
+    shadowplay clips and whatnot to friends on discord without having
+    to waste money on nitro.
 
 1.1 installation for 2PACMPEG_with_FFmpeg
     step 1: download the archive where it says "2PACMPEG_with_FFmpeg" from 
@@ -43,12 +40,12 @@
 
 3. build dependencies 
     - clang++ for x86_64 with windows headers and libs (i use ucrt but probably doesnt matter tbh)
-      (e.g https://github.com/mstorsjo/llvm-mingw/releases/tag/20240619)
+      (e.g https://github.com/mstorsjo/llvm-mingw)
     - imgui (included)
     - glfw3 (included)
 
 4. credits 
-    thanks to mastermind graphix designer Karkagami for the icon <3
+    thanks to mastermind graphix designer Karkagami for the icon(s) <3
     glfw3 - window creation and rendering backend for imgui
     imgui - gui toolkit
 

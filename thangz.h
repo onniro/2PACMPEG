@@ -58,7 +58,7 @@ typedef struct {
     f32 z;
 } vec3;
 
-// string/buffer stuff (could rewrite some of these)
+#if defined(THANGZ_STRING)
 
 inline u32 string_length(s8 *string) {
     u32 count = 0;
@@ -103,6 +103,7 @@ inline void *mem_set_value(void *destination, u8 value, u64 bytes) {
 
     return destination;
 }
+#endif
 
 #define THANGZ_DOT_H
 #endif

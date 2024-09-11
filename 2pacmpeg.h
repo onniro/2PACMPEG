@@ -19,7 +19,7 @@
 
 #define PMEMORY_AMT MEGABYTES(2)
 
-// lol
+//lol
 #define PMEM_STDOUTBUFFERSIZE MEGABYTES((u64)1)
 #define PMEM_STDOUTLINEBUFFERSIZE KILOBYTES((u64)500)
 #define PMEM_CONFIGBUFFERSIZE KILOBYTES((u64)50)
@@ -27,7 +27,7 @@
 #define PMEM_COMMANDBUFFERSIZE KILOBYTES((u64)10)
 #define PMEM_USRCOMMANDBUFFERSIZE KILOBYTES((u64)8)
 #define PMEM_INPUTPATHBUFFERSIZE KILOBYTES((u64)2)
-#define PMEM_WCHAR_INPUTBUFSIZE KILOBYTES((u64)2) // actually 4k lol
+#define PMEM_WCHAR_INPUTBUFSIZE KILOBYTES((u64)2)
 #define PMEM_OUTPUTPATHBUFFERSIZE KILOBYTES((u64)2) 
 #define PMEM_DIAGNOSTICBUFFERSIZE 512
 
@@ -36,8 +36,6 @@
 #define PMEM_FFMPEGPATHSIZE KILOBYTES((u64)2)
 
 #define SMALL_TEXTBUF_SIZE 32
-
-// // NOTE: max amount of insertions is 1000
 
 #define MAX_PRESETS 1000
 #define PRESETNAME_PITCH 64
@@ -88,7 +86,7 @@ struct text_buffer_group {
 
     s8 *working_directory;
     s8 *config_path;
-    s8 *ffmpeg_path; //deprecated basically (use working_directory and append ffmpeg\ffmpeg.exe)
+    s8 *ffmpeg_path; //deprecated basically (use working_directory and append ffmpeg\ffmpeg.exe or whatever)
 
     s8 *diagnostic_buffer;
     s8 *ffprobe_buffer;
@@ -103,7 +101,7 @@ struct preset_table {
 
 struct platform_thread_info;
 
- //////////////////////
+//////////////////////
 
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
 INTERNAL last_diagnostic_type log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);
@@ -119,6 +117,7 @@ inline void strip_end_filename(s8 *file_path);
 INTERNAL void argument_options_calculate_bitrate(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info, char *target_filesize_buffer, char *bitrate_buf);
 INTERNAL void argument_options_count_audio_tracks(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info, char *target_filesize_buffer, char *bitrate_buf);
 INTERNAL void argument_options(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info, char *target_filesize_buffer, char *bitrate_buf);
+INTERNAL void add_args_to_presets(text_buffer_group *tbuf_group, preset_table *p_table, char *preset_name_buffer);
 INTERNAL void basic_controls_update(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars, platform_thread_info *thread_info);
 INTERNAL void preset_list_update(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars);
 INTERNAL void update_window(text_buffer_group *tbuf_group, preset_table *p_table, runtime_vars *rt_vars, platform_thread_info *thread_info);

@@ -18,8 +18,9 @@
 
 #include "2pacmpeg.cpp"
 
-INTERNAL void *platform_make_heap_buffer(program_memory *target, 
-                                        u64 pool_size) {
+INTERNAL void *
+platform_make_heap_buffer(program_memory *target, u64 pool_size) 
+{
     target->memory = VirtualAlloc(0, pool_size, 
                                    MEM_RESERVE|MEM_COMMIT,
                                    PAGE_READWRITE);
@@ -29,7 +30,9 @@ INTERNAL void *platform_make_heap_buffer(program_memory *target,
     return target->memory;
 }
 
-INTERNAL void platform_init_threading(platform_thread_info *thread_info) {
+INTERNAL void 
+platform_init_threading(platform_thread_info *thread_info) 
+{
     thread_info->cmd_stream_attribs.nLength = sizeof(SECURITY_ATTRIBUTES);
     thread_info->cmd_stream_attribs.bInheritHandle = TRUE;
 
@@ -51,7 +54,9 @@ INTERNAL void platform_init_threading(platform_thread_info *thread_info) {
 #endif
 }
 
-DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
+DWORD __stdcall 
+platform_thread_read_stdout(void *thread_args_voidptr) 
+{
     win32_thread_args *thread_args = (win32_thread_args *)thread_args_voidptr;
 
     //bit verbose but aight
@@ -72,7 +77,7 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
     } break;
 
     case ffprobe: {
-        char temp_buffer[512];
+        char temp_buffer[PMEM_DIAGNOSTICBUFFERSIZE];
         DWORD line_buffer_size;
 
         for(;;) {
@@ -80,7 +85,7 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
                     temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE, 
                     &line_buffer_size, 0)) {
                 strncat(thread_args->_tbuf_group->ffprobe_buffer,
-                        temp_buffer, 512);
+                        temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE);
             } 
             else {
                 break;
@@ -100,7 +105,9 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
     return EXIT_SUCCESS;
 }
 
-DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr) {
+DWORD __stdcall 
+platform_thread_wait_for_exit(void *thread_args_voidptr) 
+{
     win32_thread_args *thread_args = (win32_thread_args *)thread_args_voidptr;
 
     thread_args->_thread_info->stdio_thread_handle = CreateThread(0, 0, 
@@ -145,7 +152,9 @@ DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr) {
     return EXIT_SUCCESS;
 }
 
-INTERNAL bool32 platform_kill_process(platform_thread_info *thread_info) {
+INTERNAL bool32 
+platform_kill_process(platform_thread_info *thread_info) 
+{
     bool32 result = false;
     if(TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, 
             PROCESS_TERMINATE)) {
@@ -155,9 +164,11 @@ INTERNAL bool32 platform_kill_process(platform_thread_info *thread_info) {
     return result;
 }
 
-INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
-                                            platform_thread_info *thread_info,
-                                            runtime_vars *rt_vars) {
+INTERNAL void 
+platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
+                                platform_thread_info *thread_info,
+                                runtime_vars *rt_vars) 
+{
 #if _2PACMPEG_DEBUG
     memset(tbuf_group->temp_buffer, 0, 
             strlen(tbuf_group->temp_buffer));
@@ -180,7 +191,9 @@ INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
 }
 
 #if 1
-INTERNAL wchar_t *platform_file_input_dialog(wchar_t *output_buffer) {
+INTERNAL wchar_t *
+platform_file_input_dialog(wchar_t *output_buffer) 
+{
     HRESULT result = CoInitializeEx(0, COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
 
     if(SUCCEEDED(result)) {
@@ -212,8 +225,9 @@ INTERNAL wchar_t *platform_file_input_dialog(wchar_t *output_buffer) {
 }
 #endif
 
-INTERNAL s8 *platform_get_working_directory(s8 *destination, 
-                                            DWORD buffer_size) {
+INTERNAL s8 *
+platform_get_working_directory(s8 *destination, DWORD buffer_size) 
+{
     s8 *result = 0;
     DWORD path_length = GetModuleFileNameA(0, destination, buffer_size);
 
@@ -229,7 +243,9 @@ INTERNAL s8 *platform_get_working_directory(s8 *destination,
     return result;
 }
 
-inline bool32 platform_file_exists(s8 *file_path) {
+inline bool32 
+platform_file_exists(s8 *file_path) 
+{
     bool32 result = false;
     if(PathFileExistsA(file_path)) {
         result = true;
@@ -238,7 +254,9 @@ inline bool32 platform_file_exists(s8 *file_path) {
     return result;
 }
 
-inline bool32 platform_directory_exists(s8 *directory_name) {
+inline bool32 
+platform_directory_exists(s8 *directory_name) 
+{
     bool32 result = false;
     if(PathIsDirectoryA(directory_name)) {
         result = true;
@@ -247,9 +265,11 @@ inline bool32 platform_directory_exists(s8 *directory_name) {
     return result;
 }
 
-INTERNAL bool32 platform_read_file(s8 *file_path, 
-                                    s8 *destination, 
-                                    u64 *dest_size) {
+INTERNAL bool32 
+platform_read_file(s8 *file_path, 
+                s8 *destination, 
+                u64 *dest_size) 
+{
     bool32 result = false;
     HANDLE file_handle = CreateFileA(file_path, GENERIC_READ,
                                    FILE_SHARE_READ, 0, OPEN_EXISTING,
@@ -281,9 +301,11 @@ INTERNAL bool32 platform_read_file(s8 *file_path,
     return result;
 }
 
-INTERNAL bool32 platform_write_file(s8 *file_path, 
-                                    void *in_buffer, 
-                                    u32 buffer_size) {
+INTERNAL bool32 
+platform_write_file(s8 *file_path, 
+                    void *in_buffer, 
+                    u32 buffer_size) 
+{
     bool32 result = false;
     HANDLE file_handle = CreateFileA(file_path, GENERIC_WRITE,
                                     FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
@@ -307,8 +329,10 @@ INTERNAL bool32 platform_write_file(s8 *file_path,
     return result;
 }
 
-int __stdcall WinMain(HINSTANCE instance, HINSTANCE,
-                    char *cmd_args, int) {
+int __stdcall 
+WinMain(HINSTANCE instance, HINSTANCE, 
+        char *cmd_args, int) 
+{
 #if 1
 #define SCHEDULER_MS_RESOLUTION 1
     if(timeBeginPeriod(SCHEDULER_MS_RESOLUTION) == TIMERR_NOERROR) {
@@ -384,8 +408,8 @@ int __stdcall WinMain(HINSTANCE instance, HINSTANCE,
         tbuf_group.default_path_buffer[0] = 0x0;
     }
 
-    s8 _diagnostic_buffer[512] = {0};
-    s8 _ffprobe_buffer[512] = {0};
+    s8 _diagnostic_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
+    s8 _ffprobe_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
     tbuf_group.diagnostic_buffer = _diagnostic_buffer;
     tbuf_group.ffprobe_buffer = _ffprobe_buffer;
 

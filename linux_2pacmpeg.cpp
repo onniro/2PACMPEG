@@ -1,14 +1,23 @@
 
+/*
+NOTE: the loonix version assumes that ffmpeg is already installed
+and can be found from some $PATH directory
+
+TODO: this might not work when ran as root on some distributions 
+(works on my machine), so maybe add some warning for that
+*/
+
 #define _2PACMPEG_LINUX 1
 #undef _2PACMPEG_WIN32
 
+#include "stdint.h"
 #include "stdio.h"
 #include "string.h"
 #include "sys/mman.h"
 #include "sys/stat.h"
-#include "stdint.h"
 #include "unistd.h"
 #include "fcntl.h"
+#include "pthread.h"
 #include "stdlib.h"
 
 #include "thangz.h"
@@ -16,66 +25,151 @@
 #include "linux_2pacmpeg.h" 
 
 #include "2pacmpeg.cpp"
-
+    
 INTERNAL void *
 platform_make_heap_buffer(program_memory *target, u64 pool_size) 
 {
-    //TODO: forreal fix this shit lmao
-#define _2PACMPEG_USE_MALLOC 1
-#if !_2PACMPEG_USE_MALLOC
-    char path_buffer[2048];
-    size_t bytes_read = readlink("/proc/self/exe", path_buffer, 2048);
-    path_buffer[bytes_read] = 0x0;
-
-    int file_descriptor = open(path_buffer, O_RDONLY);
-    if(file_descriptor != -1) {
-        target->memory = mmap(0, pool_size, 
-                            PROT_READ|PROT_WRITE, MAP_PRIVATE,
-                            file_descriptor, 0);
-        target->write_ptr = target->memory;
-        target->capacity = pool_size;
-    }
-#else 
-    target->memory = malloc(pool_size);
+    target->memory = mmap(0, pool_size, 
+                        PROT_READ|PROT_WRITE, 
+                        MAP_PRIVATE|MAP_ANONYMOUS,
+                        0, 0);
     target->write_ptr = target->memory;
     target->capacity = pool_size;
-#endif
 
     return target->memory;
 }
 
-INTERNAL void
-platform_init_threading(platform_thread_info *thread_info)
+INTERNAL void 
+platform_init_threading(platform_thread_info *thread_info) 
 {
+    //TODO (might not have to be implemented)
+
     return;
 }
 
-INTERNAL bool32
-platform_kill_process(platform_thread_info *thread_info)
+void *
+platform_thread_read_proc_stdout(void *args_voidptr) 
 {
-    return true;
+    //NOTE: this is the naive implementation (instead of fork() followed by exec())
+    linux_thread_args *thread_args = (linux_thread_args *)args_voidptr;
+    thread_args->_thread_info->read_pipe = 
+            popen(thread_args->_tbuf_group->command_buffer, "r");
+    
+    if(!thread_args->_thread_info->read_pipe) {
+        pthread_exit(0);
+    }
+    else {
+        log_diagnostic("[fatal error]: process failed to start.",
+                        last_diagnostic_type::error,
+                        thread_args->_tbuf_group);
+    }
+
+    thread_args->_rt_vars->ffmpeg_is_running = true;
+
+    char *line_buffer = thread_args->_tbuf_group->stdout_line_buffer;
+    char *full_buffer = thread_args->_tbuf_group->stdout_buffer;
+    char *ffprobe_buffer = thread_args->_tbuf_group->ffprobe_buffer;
+
+    switch(*thread_args->_prog_enum) {
+    case ffmpeg: {
+        log_diagnostic("[info]: FFmpeg started...",
+                        last_diagnostic_type::info,
+                        thread_args->_tbuf_group);
+
+        while(fgets(line_buffer, 
+                PMEM_STDOUTLINEBUFFERSIZE, 
+                thread_args->_thread_info->read_pipe)) {
+            strncat(full_buffer, line_buffer, 
+                    PMEM_STDOUTBUFFERSIZE);
+        }
+
+        log_diagnostic("[info]: FFmpeg finished.",
+                        last_diagnostic_type::info,
+                        thread_args->_tbuf_group);
+    } break;
+
+    case ffprobe: {
+        char temp_buffer[PMEM_DIAGNOSTICBUFFERSIZE];
+
+        while(fgets(line_buffer, 
+                PMEM_STDOUTLINEBUFFERSIZE, 
+                thread_args->_thread_info->read_pipe)) {
+            strncat(ffprobe_buffer, line_buffer,
+                    PMEM_DIAGNOSTICBUFFERSIZE);
+        }
+    } break;
+
+    case ffplay: {
+    } break;
+
+    case other: {
+    } break;
+
+    default: break;
+    }
+
+    thread_args->_rt_vars->ffmpeg_is_running = false;
+
+    pthread_exit(EXIT_SUCCESS);
 }
 
-INTERNAL void //TODO
+INTERNAL bool32 
+platform_kill_process(platform_thread_info *thread_info) 
+{
+    //NOTE: this doesn't work lmao (most probably)
+    bool32 result = false;
+    if(thread_info->read_pipe) {
+        if(pclose(thread_info->read_pipe) > 0) {
+            result = true;
+        }
+    }
+
+    return result;
+}
+
+INTERNAL void 
 platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
                                 platform_thread_info *thread_info,
                                 runtime_vars *rt_vars) 
 {
-    return;
+    //TODO: testing n shieet
+    LOCAL_STATIC linux_thread_args thread_args;
+    thread_args._tbuf_group = tbuf_group;
+    thread_args._thread_info = thread_info;
+    thread_args._rt_vars = rt_vars;
+    thread_args._prog_enum = &thread_info->prog_enum;
+
+    if(pthread_create(&thread_info->read_thread_handle, 0, 
+                        platform_thread_read_proc_stdout,
+                        (void *)&thread_args)) {
+        log_diagnostic("[fatal error]: thread creation failed.",
+                        last_diagnostic_type::error,
+                        tbuf_group);
+#if _2PACMPEG_DEBUG
+        fprintf(stderr, "[fatal error]: thread creation failed.");
+#endif
+    }
+    else {
+        //might break shit but ill see what it does
+        pthread_detach(thread_info->read_thread_handle);
+    }
 }
 
 INTERNAL wchar_t *
-platform_file_input_dialog(wchar_t *output_buffer)
+platform_file_input_dialog(wchar_t *output_buffer) 
 {
     //NOTE: no standard way to do this on X11, so wont be implemented for a while
     return output_buffer;
 }
 
 INTERNAL char *
-platform_get_working_directory(char *destination, uint32_t buffer_size)
+platform_get_working_directory(char *destination, 
+                            uint32_t buffer_size) 
 {
     //NOTE: untested 
-    size_t bytes_read = readlink("/proc/self/exe", destination, buffer_size);
+    size_t bytes_read = readlink("/proc/self/exe", 
+                                destination, 
+                                buffer_size);
     destination[bytes_read] = 0x0;
 
     for(int char_index = (int)bytes_read;
@@ -87,14 +181,13 @@ platform_get_working_directory(char *destination, uint32_t buffer_size)
         else {
             break;
         }
-
     }
 
     return destination;
 }
 
-inline bool32
-platform_file_exists(char *file_path)
+inline bool32 
+platform_file_exists(char *file_path) 
 {
     bool32 result = false;
     struct stat stat_struct;
@@ -120,24 +213,52 @@ platform_directory_exists(char *directory_name)
     return result;
 }
 
-INTERNAL bool32
+INTERNAL bool32 
 platform_read_file(char *file_path, 
                 char *destination, 
-                u64 *dest_size)
+                u64 *dest_size) 
 {
-    return false;
+    bool32 result = false;
+    int file_descriptor = open(file_path, O_RDONLY);
+
+    if(file_descriptor != -1) {
+        struct stat stat_buf;
+        fstat(file_descriptor, &stat_buf);
+        *dest_size = read(file_descriptor, 
+                        destination, 
+                        stat_buf.st_size);
+        result = (*dest_size == stat_buf.st_size);
+
+        close(file_descriptor);
+    }
+
+    return result;
 }
 
-INTERNAL bool32
+INTERNAL bool32 
 platform_write_file(char *file_path,
                     void *in_buffer,
-                    u64 buffer_size)
+                    u64 buffer_size) 
 {
-    return false;
+    bool32 result = false;
+    int file_descriptor = open(file_path, 
+                        O_CREAT|O_WRONLY|O_TRUNC, 
+                        S_IRUSR|S_IWUSR);
+
+    if(file_descriptor != -1) {
+        s64 write_status = write(file_descriptor, 
+                                in_buffer, 
+                                buffer_size);  
+        result = (write_status == buffer_size);
+
+        close(file_descriptor);
+    }
+
+    return result;
 }
 
-int
-main(int arg_count, char **args)
+int 
+main(int arg_count, char **args) 
 {
     if(!glfwInit()) {
         fprintf(stderr, "glfwInit() failed.\n");
@@ -151,9 +272,11 @@ main(int arg_count, char **args)
     rt_vars.win_width = 960;
     rt_vars.win_height = 540;
     rt_vars.ffmpeg_is_running = false;
-    rt_vars.win_ptr = glfwCreateWindow(rt_vars.win_width, rt_vars.win_height, 
-            "2PACMPEG v2.3 - 2PAC 4 LYFE (Definitive Edition)", 
-            0, 0);
+    rt_vars.win_ptr = glfwCreateWindow(rt_vars.win_width, 
+                                        rt_vars.win_height, 
+                                        "2PACMPEG v2.3 - 2PAC 4 LYFE (Definitive Edition)", 
+                                        0, 0);
+
     if(!rt_vars.win_ptr) {
         fprintf(stderr, "null pointer to GLFW window\n");
         return -1;
@@ -172,7 +295,6 @@ main(int arg_count, char **args)
     ImGui::StyleColorsDark();
     ImGui_ImplGlfw_InitForOpenGL(rt_vars.win_ptr, true);
     ImGui_ImplOpenGL3_Init("#version 130");
-
 
     //TODO: do something about thsi
 #if 0
@@ -206,11 +328,10 @@ main(int arg_count, char **args)
         tbuf_group.default_path_buffer[0] = 0x0;
     }
 
-    s8 __diagnostic_buffer[512];
-    tbuf_group.diagnostic_buffer = __diagnostic_buffer;
-    if(tbuf_group.diagnostic_buffer) {
-        tbuf_group.diagnostic_buffer[0] = 0x0;
-    }
+    s8 _diagnostic_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
+    s8 _ffprobe_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0}; 
+    tbuf_group.diagnostic_buffer = _diagnostic_buffer;
+    tbuf_group.ffprobe_buffer = _ffprobe_buffer;
 
     tbuf_group.working_directory =  (s8 *)heapbuf_alloc_region(&p_memory, PMEM_WORKINGDIRSIZE);
     platform_get_working_directory(tbuf_group.working_directory, 1024);
