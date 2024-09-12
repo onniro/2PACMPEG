@@ -13,9 +13,25 @@
 
 // macros and shit
 
-#define INTERNAL static
-#define GLOBAL static
-#define LOCAL_STATIC static
+#if !defined(INTERNAL)
+    #define INTERNAL static
+#else
+    #pragma warning "'INTERNAL' already defined"
+#endif
+
+#if !defined(GLOBAL)
+    #define GLOBAL static
+#else
+    #pragma warning "'GLOBAL' already defined"
+#endif
+
+#if !defined(LOCAL_STATIC)
+    #define LOCAL_STATIC static
+#else
+    #pragma warning "'LOCAL_STATIC' already defined"
+#endif
+
+#define THANGZ_INTERNAL static
 
 #define KILOBYTES(value) (value*1024)
 #define MEGABYTES(value) (KILOBYTES(value)*1024)
@@ -60,7 +76,9 @@ typedef struct {
 
 #if defined(THANGZ_STRING)
 
-inline u32 string_length(s8 *string) {
+inline u32 
+string_length(s8 *string) 
+{
     u32 count = 0;
     if(string) {
         while(*string++) {
@@ -71,13 +89,17 @@ inline u32 string_length(s8 *string) {
     return count;
 }
 
-inline s8 *string_copy(s8 *destination, s8 *source) {
+inline s8 *
+string_copy(s8 *destination, s8 *source) 
+{
     while(*destination++ = *source++);
 
     return destination;
 }
 
-inline s8 *string_n_copy(s8 *destination, s8 *source, u32 char_amount) {
+inline s8 *
+string_n_copy(s8 *destination, s8 *source, u32 char_amount) 
+{
     for(u32 index = 0; index < char_amount; ++index) {
         *destination++ = *source++;
     }
@@ -94,7 +116,9 @@ inline void *mem_copy(void *destination, void *source, u64 bytes) {
     return destination;
 }
 
-inline void *mem_set_value(void *destination, u8 value, u64 bytes) {
+inline void *
+mem_set_value(void *destination, u8 value, u64 bytes) 
+{
     u8 *temp = (u8 *)destination;
     while(bytes) {
         *temp++ = value;
@@ -103,6 +127,69 @@ inline void *mem_set_value(void *destination, u8 value, u64 bytes) {
 
     return destination;
 }
+#endif
+
+#if defined(THANGZ_POSIXAPI_HELPERS)
+
+#include "stdio.h"
+#include "unistd.h"
+#include "sys/types.h"
+#include "sys/wait.h"
+#include "string.h"
+
+THANGZ_INTERNAL bool32 
+posixapi_get_stdout(char *command, int *output_fd, 
+                    pid_t *proc_id, bool32 include_stderr) 
+{
+    bool32 result = false;
+
+    int pipe_fd[2];
+    if(pipe(pipe_fd) == -1) {
+        perror("pipe");
+        _exit(1);
+    }
+
+    *proc_id = fork();
+    if(*proc_id == -1) {
+        perror("fork");
+#if 0
+        ASSERT_CRASH();
+#else
+        _exit(1);
+#endif
+    }
+
+    if(!*proc_id) {
+        close(pipe_fd[STDIN_FILENO]);
+        dup2(pipe_fd[STDOUT_FILENO], STDOUT_FILENO);
+        if(include_stderr) {
+            dup2(STDOUT_FILENO, STDERR_FILENO);
+        }
+        close(pipe_fd[STDOUT_FILENO]);
+
+        char _temp[4096];
+        //no idea why the double quotes make it work
+        snprintf(_temp, 4095, "''%s''", command);
+
+        //i'm aware that this returns the PID of the shell rather than
+        //the process which it starts but i think that's good enough
+        //(at least for now, since killing the shell also kills its 
+        //subprocesses assuming they didn't detach from the shell)
+        execl("/bin/sh", "sh", "-c", _temp, (char *)0);
+        perror("execl");
+
+        _exit(1);
+    } 
+    else {
+        close(pipe_fd[STDOUT_FILENO]);
+        *output_fd = pipe_fd[STDIN_FILENO];
+
+        result = true;
+    }
+
+    return result;
+}
+
 #endif
 
 #define THANGZ_DOT_H

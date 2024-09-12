@@ -20,7 +20,9 @@ TODO: this might not work when ran as root on some distributions
 #include "pthread.h"
 #include "stdlib.h"
 
+#define THANGZ_POSIXAPI_HELPERS
 #include "thangz.h"
+
 #include "2pacmpeg.h"
 #include "linux_2pacmpeg.h" 
 
@@ -42,7 +44,7 @@ platform_make_heap_buffer(program_memory *target, u64 pool_size)
 INTERNAL void 
 platform_init_threading(platform_thread_info *thread_info) 
 {
-    //TODO (might not have to be implemented)
+    //NOTE: no need to implement this on linux
 
     return;
 }
@@ -50,19 +52,22 @@ platform_init_threading(platform_thread_info *thread_info)
 void *
 platform_thread_read_proc_stdout(void *args_voidptr) 
 {
-    //NOTE: this is the naive implementation (instead of fork() followed by exec())
     linux_thread_args *thread_args = (linux_thread_args *)args_voidptr;
+#if 0
     thread_args->_thread_info->read_pipe = 
             popen(thread_args->_tbuf_group->command_buffer, "r");
-    
-    if(!thread_args->_thread_info->read_pipe) {
-        pthread_exit(0);
-    }
-    else {
+#else
+    //TODO: TEST THIS
+    if(!posixapi_get_stdout(thread_args->_tbuf_group->command_buffer,
+            &thread_args->_thread_info->file_descriptor,
+            &thread_args->_thread_info->proc_id, true)) {
         log_diagnostic("[fatal error]: process failed to start.",
                         last_diagnostic_type::error,
                         thread_args->_tbuf_group);
+
+        pthread_exit(0);
     }
+#endif
 
     thread_args->_rt_vars->ffmpeg_is_running = true;
 
@@ -75,12 +80,15 @@ platform_thread_read_proc_stdout(void *args_voidptr)
         log_diagnostic("[info]: FFmpeg started...",
                         last_diagnostic_type::info,
                         thread_args->_tbuf_group);
+        ssize_t bytes_read = 0;
 
-        while(fgets(line_buffer, 
-                PMEM_STDOUTLINEBUFFERSIZE, 
-                thread_args->_thread_info->read_pipe)) {
-            strncat(full_buffer, line_buffer, 
-                    PMEM_STDOUTBUFFERSIZE);
+        while(1) {
+            bytes_read = read(thread_args->_thread_info->file_descriptor,
+                            line_buffer,
+                            PMEM_STDOUTLINEBUFFERSIZE);
+            if(!bytes_read) {break;}
+            line_buffer[bytes_read] = 0x0;
+            strncat(full_buffer, line_buffer, PMEM_STDOUTBUFFERSIZE);
         }
 
         log_diagnostic("[info]: FFmpeg finished.",
@@ -90,12 +98,15 @@ platform_thread_read_proc_stdout(void *args_voidptr)
 
     case ffprobe: {
         char temp_buffer[PMEM_DIAGNOSTICBUFFERSIZE];
+        ssize_t bytes_read = 0;
 
-        while(fgets(line_buffer, 
-                PMEM_STDOUTLINEBUFFERSIZE, 
-                thread_args->_thread_info->read_pipe)) {
-            strncat(ffprobe_buffer, line_buffer,
-                    PMEM_DIAGNOSTICBUFFERSIZE);
+        while(1) {
+            bytes_read = read(thread_args->_thread_info->file_descriptor,
+                            line_buffer,
+                            PMEM_STDOUTLINEBUFFERSIZE);
+            if(!bytes_read) {break;}
+            line_buffer[bytes_read] = 0x0;
+            strncat(ffprobe_buffer, line_buffer, PMEM_STDOUTBUFFERSIZE);
         }
     } break;
 
@@ -108,6 +119,13 @@ platform_thread_read_proc_stdout(void *args_voidptr)
     default: break;
     }
 
+    if(fcntl(thread_args->_thread_info->file_descriptor, F_GETFD) != -1) {
+#if _2PACMPEG_DEBUG
+        puts("[info]: closing stream file descriptor.\n");
+#endif
+        close(thread_args->_thread_info->file_descriptor);
+    }
+
     thread_args->_rt_vars->ffmpeg_is_running = false;
 
     pthread_exit(EXIT_SUCCESS);
@@ -116,12 +134,10 @@ platform_thread_read_proc_stdout(void *args_voidptr)
 INTERNAL bool32 
 platform_kill_process(platform_thread_info *thread_info) 
 {
-    //NOTE: this doesn't work lmao (most probably)
+    //i assume this is safe
     bool32 result = false;
-    if(thread_info->read_pipe) {
-        if(pclose(thread_info->read_pipe) > 0) {
-            result = true;
-        }
+    if(kill(thread_info->proc_id, SIGKILL) != -1) {
+        result = true;
     }
 
     return result;
@@ -150,7 +166,9 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
 #endif
     }
     else {
-        //might break shit but ill see what it does
+#if _2PACMPEG_DEBUG
+        puts("[info]: thread detaching:\n");
+#endif
         pthread_detach(thread_info->read_thread_handle);
     }
 }
@@ -158,13 +176,14 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
 INTERNAL wchar_t *
 platform_file_input_dialog(wchar_t *output_buffer) 
 {
-    //NOTE: no standard way to do this on X11, so wont be implemented for a while
+    //NOTE: X11 doesn't have a standard way to do this unlike Windows
+    //so this won't be implemented for a while
+
     return output_buffer;
 }
 
 INTERNAL char *
-platform_get_working_directory(char *destination, 
-                            uint32_t buffer_size) 
+platform_get_working_directory(char *destination, uint32_t buffer_size) 
 {
     //NOTE: untested 
     size_t bytes_read = readlink("/proc/self/exe", 

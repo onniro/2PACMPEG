@@ -1,8 +1,10 @@
+
 /*
 FIXME: so.. fvcking.. many.. #ifs... (refactor logging)
 TODO: go through and remove spaghetti code
 TODO: fix the shit where getting the length doesn't work for MKV format
 NOTE: the hardcoding of the commands is a little janky
+TODO: update forward declarations
 */
 
 #include "2pacmpeg.h"
@@ -35,10 +37,41 @@ log_diagnostic(s8 *message,
         tbuf_group->diagnostic_buffer[strlen(tbuf_group->diagnostic_buffer)] = 0x0;
     }
 
-    //if(type != undefined) {last_diagnostic = type;}
-    last_diagnostic = type;
+    if(type != undefined) {last_diagnostic = type;}
+    //last_diagnostic = type;
  
     return last_diagnostic;
+}
+
+INTERNAL void 
+show_diagnostic(text_buffer_group *tbuf_group) 
+{
+    if(tbuf_group->diagnostic_buffer[0]) {
+        switch(log_diagnostic(0, last_diagnostic_type::undefined, 0)) {
+        case error: {
+            ImGui::PushStyleColor(ImGuiCol_Text, 
+                                IM_COL32(0xff, 0, 0, 0xFF));
+        } break;
+
+        case info: {
+            ImGui::PushStyleColor(ImGuiCol_Text, 
+                                IM_COL32(0, 0xff, 0, 0xFF));
+        } break;
+
+        case undefined:
+        default: {
+            ImGui::PushStyleColor(ImGuiCol_Text, 
+                            IM_COL32(0xcc, 0xcc, 0xcc, 0xFF));
+        } break;
+        }
+    }
+
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 5.0f);
+    ImGui::Text(tbuf_group->diagnostic_buffer);
+
+    if(tbuf_group->diagnostic_buffer[0]) {
+        ImGui::PopStyleColor();
+    }
 }
 
 INTERNAL void 
@@ -128,8 +161,10 @@ load_startup_files(text_buffer_group *tbuf_group,
 
 //not really sure how slow this can get
 inline void 
-adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group, 
-                    int rm_index = 0, int subtract_from_ceil = 0) 
+adjust_pointer_table(preset_table *p_table, 
+                    text_buffer_group *tbuf_group, 
+                    int rm_index = 0, 
+                    int subtract_from_ceil = 0) 
 {
     for(int move_index = rm_index;
             move_index < p_table->entry_amount - subtract_from_ceil;
@@ -155,8 +190,7 @@ adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group,
 }
 
 INTERNAL void 
-save_default_output_path(text_buffer_group *tbuf_group, 
-                        preset_table *p_table) 
+save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table) 
 {
     s8 *default_dir_begin;
 
@@ -334,7 +368,7 @@ remove_preset(preset_table *p_table,
     else {
         memset(whole_preset, 0, preset_length);
 
-        s8 *rm_preset_name = p_table->name_array + (rm_index * PRESETNAME_PITCH);
+        s8 *rm_preset_name = p_table->name_array + (rm_index*PRESETNAME_PITCH);
         memset(rm_preset_name, 0, strlen(rm_preset_name));
         p_table->command_table[rm_index] = 0;
     }
@@ -655,9 +689,9 @@ add_args_to_presets(text_buffer_group *tbuf_group,
 }
 
 INTERNAL void 
-menu_launch_ffmpeg(text_buffer_group *tbuf_group,
-                    runtime_vars *rt_vars,
-                    platform_thread_info *thread_info) 
+menu_start_ffmpeg(text_buffer_group *tbuf_group,
+                runtime_vars *rt_vars,
+                platform_thread_info *thread_info) 
 {
     tbuf_group->diagnostic_buffer[0] = 0x0;
 
@@ -837,8 +871,8 @@ basic_controls_update(text_buffer_group *tbuf_group,
         save_default_output_path(tbuf_group, p_table);
     }
 
-    if(ImGui::Button("launch FFmpeg")) {
-        menu_launch_ffmpeg(tbuf_group, rt_vars, thread_info);
+    if(ImGui::Button("start FFmpeg")) {
+        menu_start_ffmpeg(tbuf_group, rt_vars, thread_info);
     }
 
     ImGui::SameLine();
@@ -916,7 +950,6 @@ preset_list_update(text_buffer_group *tbuf_group,
 
             ImGui::EndPopup();
         }
-
     }
 
     ImGui::EndChild();
@@ -954,6 +987,7 @@ update_window(text_buffer_group *tbuf_group, preset_table *p_table,
 
     //////////////////////
 
+    //this is pretty dumb
     LOCAL_STATIC bool32 first_loop = true;
     ImGui::Columns(2, "columns");
     if(first_loop) {
@@ -967,34 +1001,7 @@ update_window(text_buffer_group *tbuf_group, preset_table *p_table,
 
     ImGui::NextColumn();
 
-    switch(log_diagnostic(0, last_diagnostic_type::undefined, 0)) {
-    case error: {
-        if(tbuf_group->diagnostic_buffer[0]) {
-            ImGui::PushStyleColor(ImGuiCol_Text, 
-                                IM_COL32(0xff, 0, 0, 0xFF));
-        }
-    } break;
-
-    case info: {
-        if(tbuf_group->diagnostic_buffer[0]) {
-            ImGui::PushStyleColor(ImGuiCol_Text, 
-                                IM_COL32(0, 0xff, 0, 0xFF));
-        }
-    } break;
-
-    case undefined:
-    default: {
-        ImGui::PushStyleColor(ImGuiCol_Text, 
-                        IM_COL32(0xcc, 0xcc, 0xcc, 0xFF));
-    } break;
-    }
-
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 5.0f);
-    ImGui::Text(tbuf_group->diagnostic_buffer);
-
-    if(tbuf_group->diagnostic_buffer[0]) {
-        ImGui::PopStyleColor();
-    }
+    show_diagnostic(tbuf_group);
 
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
