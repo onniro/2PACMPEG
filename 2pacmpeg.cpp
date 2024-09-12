@@ -3,8 +3,7 @@
 FIXME: so.. fvcking.. many.. #ifs... (refactor logging)
 TODO: go through and remove spaghetti code
 TODO: fix the shit where getting the length doesn't work for MKV format
-NOTE: the hardcoding of the commands is a little janky
-TODO: update forward declarations
+NOTE: the hardcoding of the commands is janky
 */
 
 #include "2pacmpeg.h"
@@ -274,7 +273,6 @@ serialize_preset(s8 *preset_name,
 #endif
     } 
     else {
-        //?????????++
 #if _2PACMPEG_WIN32
         char __diagnostic[128];
         sprintf(__diagnostic, 
@@ -325,9 +323,8 @@ remove_preset(preset_table *p_table,
             text_buffer_group *tbuf_group, 
             int rm_index) 
 {
-    //CLEANUP
     s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index * PRESETNAME_PITCH)))) - 2;
-    u32 preset_length = command_length(whole_preset) + 1; // +1 for \n
+    u32 preset_length = command_length(whole_preset) + 1;
 
     //NOTE: this shit will never happen and i dont know why i wrote it but might as well leave it in as an easter egg lmao
     if(preset_length == -1) {
@@ -402,7 +399,7 @@ remove_preset(preset_table *p_table,
     }
 }
 
-// NOTE: a little slow i think
+// NOTE: sub-optimal?
 inline bool32 
 check_duplicate_presetname(preset_table *p_table, s8 *p_name) 
 {
@@ -473,20 +470,13 @@ argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
                             tbuf_group->input_path_buffer);
 
                     thread_info->prog_enum = ffprobe;
-                    rt_vars->ffmpeg_is_running = true; //NOTE: has to be set beforehand, otherwise the main thread will continue too early
+                    rt_vars->ffmpeg_is_running = true;
                     platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars);
 
                     //TODO: try not to block the main thread
                     while(rt_vars->ffmpeg_is_running);
 
                     f32 media_duration = atof(tbuf_group->ffprobe_buffer);
-#if 0
-                    char _thing[256];
-                    sprintf(_thing, 
-                            "media_duration=%f\nffmpeg_is_running=%i\nffprobe_buffer:%s\n",
-                            media_duration, rt_vars->ffmpeg_is_running, tbuf_group->ffprobe_buffer);
-                    OutputDebugStringA(_thing);
-#endif
                     if(media_duration) {
                         f32 bitrate_kb = (atof(target_filesize_buffer)*8000.0f) /
                                             media_duration;
@@ -625,7 +615,6 @@ argument_options(text_buffer_group *tbuf_group,
                 char *bitrate_buf) 
 {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(0x22, 0x22, 0x33, 0xFF));
-
     ImGui::BeginChild("##arg_options", ImVec2(0.0f, 0.0f), 
                     ImGuiChildFlags_AutoResizeY|ImGuiChildFlags_NavFlattened);
     //padding
@@ -883,7 +872,6 @@ basic_controls_update(text_buffer_group *tbuf_group,
         memset(tbuf_group->stdout_line_buffer, 0, strlen(tbuf_group->stdout_line_buffer));
     }
 
-    // ImGui::SameLine(ImGui::GetColumnWidth() - 150);
     ImGui::SameLine(ImGui::GetColumnWidth() - 
                     ImGui::CalcTextSize("kill FFmpeg").x - 15.0f);
     if(ImGui::Button("kill FFmpeg")) {

@@ -107,7 +107,9 @@ string_n_copy(s8 *destination, s8 *source, u32 char_amount)
     return destination;
 }
 
-inline void *mem_copy(void *destination, void *source, u64 bytes) {
+inline void *
+mem_copy(void *destination, void *source, u64 bytes) 
+{
     while(bytes) {
         *destination = *(u8 *)source += 1;
         --bytes;

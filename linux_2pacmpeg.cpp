@@ -20,7 +20,7 @@ TODO: this might not work when ran as root on some distributions
 #include "pthread.h"
 #include "stdlib.h"
 
-#define THANGZ_POSIXAPI_HELPERS
+#define THANGZ_POSIXAPI_HELPERS 1
 #include "thangz.h"
 
 #include "2pacmpeg.h"
@@ -53,11 +53,7 @@ void *
 platform_thread_read_proc_stdout(void *args_voidptr) 
 {
     linux_thread_args *thread_args = (linux_thread_args *)args_voidptr;
-#if 0
-    thread_args->_thread_info->read_pipe = 
-            popen(thread_args->_tbuf_group->command_buffer, "r");
-#else
-    //TODO: TEST THIS
+
     if(!posixapi_get_stdout(thread_args->_tbuf_group->command_buffer,
             &thread_args->_thread_info->file_descriptor,
             &thread_args->_thread_info->proc_id, true)) {
@@ -67,7 +63,6 @@ platform_thread_read_proc_stdout(void *args_voidptr)
 
         pthread_exit(0);
     }
-#endif
 
     thread_args->_rt_vars->ffmpeg_is_running = true;
 
@@ -120,9 +115,6 @@ platform_thread_read_proc_stdout(void *args_voidptr)
     }
 
     if(fcntl(thread_args->_thread_info->file_descriptor, F_GETFD) != -1) {
-#if _2PACMPEG_DEBUG
-        puts("[info]: closing stream file descriptor.\n");
-#endif
         close(thread_args->_thread_info->file_descriptor);
     }
 
@@ -158,19 +150,16 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
     if(pthread_create(&thread_info->read_thread_handle, 0, 
                         platform_thread_read_proc_stdout,
                         (void *)&thread_args)) {
-        log_diagnostic("[fatal error]: thread creation failed.",
-                        last_diagnostic_type::error,
-                        tbuf_group);
+        log_diagnostic("[fatal error]: spawning thread failed.",
+                        last_diagnostic_type::error, tbuf_group);
 #if _2PACMPEG_DEBUG
-        fprintf(stderr, "[fatal error]: thread creation failed.");
+        fprintf(stderr, "[fatal error]: spawning thread failed.");
 #endif
+
+        return;
     }
-    else {
-#if _2PACMPEG_DEBUG
-        puts("[info]: thread detaching:\n");
-#endif
-        pthread_detach(thread_info->read_thread_handle);
-    }
+
+    pthread_detach(thread_info->read_thread_handle);
 }
 
 INTERNAL wchar_t *
@@ -185,7 +174,6 @@ platform_file_input_dialog(wchar_t *output_buffer)
 INTERNAL char *
 platform_get_working_directory(char *destination, uint32_t buffer_size) 
 {
-    //NOTE: untested 
     size_t bytes_read = readlink("/proc/self/exe", 
                                 destination, 
                                 buffer_size);
@@ -234,8 +222,8 @@ platform_directory_exists(char *directory_name)
 
 INTERNAL bool32 
 platform_read_file(char *file_path, 
-                char *destination, 
-                u64 *dest_size) 
+                    char *destination, 
+                    u64 *dest_size) 
 {
     bool32 result = false;
     int file_descriptor = open(file_path, O_RDONLY);
@@ -377,8 +365,7 @@ main(int arg_count, char **args)
             ((f32)(((u64)p_memory.write_ptr - (u64)p_memory.memory )) / 1024.0f / 1024.0f), 
             ((f32)p_memory.capacity) / 1024.0f / 1024.0f,
             tbuf_group.working_directory,
-            tbuf_group.config_path,
-            tbuf_group.ffmpeg_path);
+            tbuf_group.config_path);
 #endif
 
     while(!glfwWindowShouldClose(rt_vars.win_ptr)) {
@@ -396,7 +383,7 @@ main(int arg_count, char **args)
     glfwTerminate();
 
     if(rt_vars.ffmpeg_is_running) {
-        //TODO
+        platform_kill_process(&thread_info);
     }
 
     return EXIT_SUCCESS;
