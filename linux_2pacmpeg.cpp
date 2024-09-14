@@ -1,10 +1,14 @@
 
 /*
 NOTE: the loonix version assumes that ffmpeg is already installed
-and can be found from some $PATH directory
+and can be found from some $PATH directory. hence, this might
+not work on certain distributions, or when it is installed using
+certain package managers, and/or when 2PACMPEG is ran as root.
+(TODO: maybe add a warning for this?)
 
-TODO: this might not work when ran as root on some distributions 
-(works on my machine), so maybe add some warning for that
+TODO: platform_kill_process here is broken(). i guess killing the shell
+from which ffmpeg is ran doesn't actually kill ffmpeg? (even though
+there's no reason it would detach from said shell)
 */
 
 #define _2PACMPEG_LINUX 1
@@ -140,12 +144,17 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
                                 platform_thread_info *thread_info,
                                 runtime_vars *rt_vars) 
 {
+#if _2PACMPEG_DEBUG
+    printf("[debug]: attempting to execute:\n%s\n", 
+            tbuf_group->command_buffer);
+#endif
+
     //TODO: testing n shieet
     LOCAL_STATIC linux_thread_args thread_args;
-    thread_args._tbuf_group = tbuf_group;
-    thread_args._thread_info = thread_info;
-    thread_args._rt_vars = rt_vars;
-    thread_args._prog_enum = &thread_info->prog_enum;
+    thread_args._tbuf_group =   tbuf_group;
+    thread_args._thread_info =  thread_info;
+    thread_args._rt_vars =      rt_vars;
+    thread_args._prog_enum =    &thread_info->prog_enum;
 
     if(pthread_create(&thread_info->read_thread_handle, 0, 
                         platform_thread_read_proc_stdout,
@@ -199,7 +208,7 @@ platform_file_exists(char *file_path)
     bool32 result = false;
     struct stat stat_struct;
 
-    if(stat(file_path, &stat_struct)) {
+    if(!stat(file_path, &stat_struct)) {
         result = true;
     }
 
@@ -212,7 +221,7 @@ platform_directory_exists(char *directory_name)
     bool32 result = false;
     struct stat stat_struct;
 
-    if(stat(directory_name, &stat_struct) == 0 && 
+    if(!stat(directory_name, &stat_struct) && 
             S_ISDIR(stat_struct.st_mode)) {
         result = true;
     }
@@ -304,10 +313,16 @@ main(int arg_count, char **args)
     ImGui_ImplOpenGL3_Init("#version 130");
 
     //TODO: do something about thsi
-#if 0
-    if(!strstr(cmd_args, "--use-bitmap-font")) {
-        rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("/usr/share/fonts/truetype/noto/NotoMono-Regular.ttf",
-                                    13.0f, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+#if 1
+    if(!args[1] || strcmp(args[1], "--use-bitmap-font")) {
+        //char _fontname_buffer[] = "/usr/share/fonts/truetype/noto/LiberationMono-Regular.ttf";
+        char _fontname_buffer[] = "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf";
+        if(platform_file_exists(_fontname_buffer)) {
+            rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
+                                        _fontname_buffer,
+                                        14.0f, 0, 
+                                        ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+        }
     }
 #endif
 
@@ -345,12 +360,9 @@ main(int arg_count, char **args)
 
     if(tbuf_group.working_directory) {
         tbuf_group.config_path = (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGPATHSIZE);
-        //tbuf_group.ffmpeg_path = (s8 *)heapbuf_alloc_region(&p_memory, PMEM_FFMPEGPATHSIZE);
 
         sprintf(tbuf_group.config_path, 
                 "%sPRESETFILE", tbuf_group.working_directory);
-        //sprintf(tbuf_group.ffmpeg_path, 
-        //        "%sffmpeg\\ffmpeg.exe", tbuf_group.working_directory);
     }
 
     preset_table p_table = {0};
@@ -361,7 +373,7 @@ main(int arg_count, char **args)
     load_startup_files(&tbuf_group, &p_table);
 
 #if _2PACMPEG_DEBUG
-    printf("-- TRACELOG START --\nmemory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\nffmpeg_path:%s\n", 
+    printf("-- TRACELOG START --\nmemory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\n", 
             ((f32)(((u64)p_memory.write_ptr - (u64)p_memory.memory )) / 1024.0f / 1024.0f), 
             ((f32)p_memory.capacity) / 1024.0f / 1024.0f,
             tbuf_group.working_directory,

@@ -5,12 +5,12 @@ struct platform_thread_info {
     //TODO
     int file_descriptor;
     pid_t proc_id;
-    FILE *read_pipe;
+    FILE *read_pipe; //not used i think?
     pthread_t read_thread_handle;
     program_enum prog_enum;
 };
 
-//TODO: refactor this redundant shit to make more sense
+//TODO: refactor this redundant shit
 struct linux_thread_args {
     text_buffer_group *_tbuf_group;
     platform_thread_info *_thread_info;

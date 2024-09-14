@@ -62,7 +62,7 @@ platform_thread_read_stdout(void *thread_args_voidptr)
     //bit verbose but aight
     switch(*thread_args->_prog_enum) {
     case ffmpeg: {
-        for(;;) {
+        while(1) {
             DWORD line_buffer_size;
             if(ReadFile(thread_args->_thread_info->read_handle,
                     thread_args->_tbuf_group->stdout_line_buffer,
@@ -78,12 +78,15 @@ platform_thread_read_stdout(void *thread_args_voidptr)
 
     case ffprobe: {
         char temp_buffer[PMEM_DIAGNOSTICBUFFERSIZE];
-        DWORD line_buffer_size;
 
-        for(;;) {
+        while(1) {
+            DWORD line_buffer_size;
             if(ReadFile(thread_args->_thread_info->read_handle,
                     temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE, 
                     &line_buffer_size, 0)) {
+#if 1
+                temp_buffer[line_buffer_size] = 0x0;
+#endif
                 strncat(thread_args->_tbuf_group->ffprobe_buffer,
                         temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE);
             } 
@@ -333,14 +336,12 @@ int __stdcall
 WinMain(HINSTANCE instance, HINSTANCE, 
         char *cmd_args, int) 
 {
-#if 1
 #define SCHEDULER_MS_RESOLUTION 1
     if(timeBeginPeriod(SCHEDULER_MS_RESOLUTION) == TIMERR_NOERROR) {
 #if _2PACMPEG_DEBUG
         OutputDebugStringA("[info]: set Windows scheduler granularity to 1 millisecond.\n");
 #endif
     }
-#endif
 
     if(!glfwInit()) {
         OutputDebugStringA("glfwInit() failed.\n");

@@ -1,9 +1,19 @@
 
 /*
+IMPORTANT(14-sep-24): atof() and atoi() on *(only) windows release build*
+(works on debug build) for whatever fucking reason can't convert to their 
+respective data types from whatever ffprobe is outputting
+NOTE: This actually has nothing to do with atof() or atoi() and the
+issue goes away when compiled with -O0 (lmao). As a potential solution
+you could try to declare everything that gets touched by other threads
+as volatile
+
+TODO: mkv format doesn't work (in the meantime you could just add a way 
+for the user to input the length of the video bc why not)
+
+TODO: turn the warning level tf up
+
 FIXME: so.. fvcking.. many.. #ifs... (refactor logging)
-TODO: go through and remove spaghetti code
-TODO: fix the shit where getting the length doesn't work for MKV format
-NOTE: the hardcoding of the commands is janky
 */
 
 #include "2pacmpeg.h"
@@ -460,14 +470,15 @@ argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
                     memset(tbuf_group->ffprobe_buffer, 0, strlen(tbuf_group->ffprobe_buffer));
                     memset(bitrate_buf, 0, strlen(bitrate_buf));
 
-                    snprintf(tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
 #if _2PACMPEG_WIN32
-                            "%sffmpeg\\ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 \"%s\"",
-                            tbuf_group->working_directory, 
-#else
+                    snprintf(tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
+                            "%sffmpeg\\ffprobe.exe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 \"%s\"",
+                            tbuf_group->working_directory, tbuf_group->input_path_buffer);
+#elif _2PACMPEG_LINUX
+                    snprintf(tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
                             "ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 \"%s\"",
-#endif
                             tbuf_group->input_path_buffer);
+#endif
 
                     thread_info->prog_enum = ffprobe;
                     rt_vars->ffmpeg_is_running = true;
@@ -475,6 +486,11 @@ argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
 
                     //TODO: try not to block the main thread
                     while(rt_vars->ffmpeg_is_running);
+
+#if _2PACMPEG_WIN32 && 0
+                    //TEMPORARY
+                    printf("tbuf_group->ffprobe_buffer:%s\n", tbuf_group->ffprobe_buffer);
+#endif
 
                     f32 media_duration = atof(tbuf_group->ffprobe_buffer);
                     if(media_duration) {
@@ -535,16 +551,15 @@ argument_options_count_audio_tracks(text_buffer_group *tbuf_group,
                 memset(tbuf_group->command_buffer, 0, strlen(tbuf_group->command_buffer));
                 memset(tbuf_group->ffprobe_buffer, 0, strlen(tbuf_group->ffprobe_buffer));
 
-                snprintf(
-                        tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
 #if _2PACMPEG_WIN32
-                       "%sffmpeg\\ffprobe \"%s\" -show_entries format=nb_streams -v 0 -of compact=p=0:nk=1",
-                       tbuf_group->working_directory, tbuf_group->input_path_buffer
+                snprintf(tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
+                       "%sffmpeg\\ffprobe.exe \"%s\" -show_entries format=nb_streams -v 0 -of compact=p=0:nk=1",
+                       tbuf_group->working_directory, tbuf_group->input_path_buffer);
 #else
+                snprintf(tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
                        "ffprobe \"%s\" -show_entries format=nb_streams -v 0 -of compact=p=0:nk=1",
-                        tbuf_group->input_path_buffer
+                        tbuf_group->input_path_buffer);
 #endif
-                );
 
                 thread_info->prog_enum = ffprobe;
                 rt_vars->ffmpeg_is_running = true;
@@ -698,18 +713,26 @@ menu_start_ffmpeg(text_buffer_group *tbuf_group,
                     '/'
 #endif
                     ) && tbuf_group->default_path_buffer[0]) {
+                    //doing this the long-winded way for clarity i guess
+#if _2PACMPEG_WIN32
                 snprintf(tbuf_group->command_buffer,
                         PMEM_COMMANDBUFFERSIZE,
-#if _2PACMPEG_WIN32
                         "%sffmpeg\\ffmpeg.exe -y -hide_banner -i \"%s\" %s \"%s\\%s\"",
-#else
-                        "ffmpeg -y -hide_banner -i \"%s\" %s \"%s\\%s\"",
-#endif
                         tbuf_group->working_directory,
                         tbuf_group->input_path_buffer,
                         tbuf_group->user_cmd_buffer,
                         tbuf_group->default_path_buffer,
                         tbuf_group->output_path_buffer);
+#elif _2PACMPEG_LINUX
+                snprintf(tbuf_group->command_buffer,
+                        PMEM_COMMANDBUFFERSIZE,
+                        "ffmpeg -y -hide_banner -i \"%s\" %s \"%s/%s\"",
+                        tbuf_group->input_path_buffer,
+                        tbuf_group->user_cmd_buffer,
+                        tbuf_group->default_path_buffer,
+                        tbuf_group->output_path_buffer);
+#endif
+
 #if _2PACMPEG_DEBUG
     #if _2PACMPEG_WIN32
                 OutputDebugStringA(tbuf_group->command_buffer);
@@ -720,17 +743,22 @@ menu_start_ffmpeg(text_buffer_group *tbuf_group,
 #endif
             }
             else {
+#if _2PACMPEG_WIN32
                 snprintf(tbuf_group->command_buffer,
                         PMEM_COMMANDBUFFERSIZE,
-#if _2PACMPEG_WIN32
                         "%s\\ffmpeg\\ffmpeg.exe -y -hide_banner -i \"%s\" %s \"%s\"",
                         tbuf_group->working_directory,
-#else
-                        "ffmpeg -y -hide_banner -i \"%s\" %s \"%s\"",
-#endif
                         tbuf_group->input_path_buffer,
                         tbuf_group->user_cmd_buffer,
                         tbuf_group->output_path_buffer);
+#elif _2PACMPEG_LINUX
+                snprintf(tbuf_group->command_buffer,
+                        PMEM_COMMANDBUFFERSIZE,
+                        "ffmpeg -y -hide_banner -i \"%s\" %s \"%s\"",
+                        tbuf_group->input_path_buffer,
+                        tbuf_group->user_cmd_buffer,
+                        tbuf_group->output_path_buffer);
+#endif
             }
 
             thread_info->prog_enum = ffmpeg;
@@ -855,9 +883,16 @@ basic_controls_update(text_buffer_group *tbuf_group,
                     tbuf_group->default_path_buffer,
                     PMEM_OUTPUTPATHBUFFERSIZE);
     if(ImGui::Button("set as default folder")) {
-        tbuf_group->diagnostic_buffer[0] = 0x0;
+        if(tbuf_group->default_path_buffer[0]) {
+            tbuf_group->diagnostic_buffer[0] = 0x0;
 
-        save_default_output_path(tbuf_group, p_table);
+            save_default_output_path(tbuf_group, p_table);
+        }
+        else {
+            log_diagnostic("no directory entered.", 
+                        last_diagnostic_type::error,
+                        tbuf_group);
+        }
     }
 
     if(ImGui::Button("start FFmpeg")) {
@@ -969,7 +1004,7 @@ update_window(text_buffer_group *tbuf_group, preset_table *p_table,
                            | ImGuiWindowFlags_NoSavedSettings
                            | ImGuiWindowFlags_NoDecoration);
 
-#if defined(_2PACMPEG_IMGUI_METRICS)
+#if _2PACMPEG_IMGUI_METRICS
     ImGui::ShowMetricsWindow();
 #endif
 

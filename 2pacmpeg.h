@@ -86,7 +86,6 @@ struct text_buffer_group {
 
     s8 *working_directory;
     s8 *config_path;
-    s8 *ffmpeg_path; //deprecated basically (use working_directory and append ffmpeg\ffmpeg.exe or whatever)
 
     s8 *diagnostic_buffer;
     s8 *ffprobe_buffer;
