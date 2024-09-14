@@ -36,6 +36,8 @@
 #define PMEM_FFMPEGPATHSIZE KILOBYTES((u64)2)
 
 #define SMALL_TEXTBUF_SIZE 32
+#define AUDIO_TRACK_COUNT_BUFSIZE 16
+#define BITRATE_RESULT_BUFSIZE 128
 
 #define MAX_PRESETS 1000
 #define PRESETNAME_PITCH 64
@@ -113,6 +115,7 @@ inline int command_length(s8 *command_begin);
 INTERNAL void remove_preset(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index);
 inline bool32 check_duplicate_presetname(preset_table *p_table, s8 *p_name);
 inline void strip_end_filename(s8 *file_path);
+INTERNAL void wait_ffprobe_result(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info);
 INTERNAL void argument_options_calculate_bitrate(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info, char *target_filesize_buffer, char *bitrate_buf);
 INTERNAL void argument_options_count_audio_tracks(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info, char *target_filesize_buffer, char *bitrate_buf);
 INTERNAL void argument_options(text_buffer_group *tbuf_group, runtime_vars *rt_vars, platform_thread_info *thread_info, char *target_filesize_buffer, char *bitrate_buf);

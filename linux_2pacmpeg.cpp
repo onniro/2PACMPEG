@@ -90,7 +90,7 @@ platform_thread_read_proc_stdout(void *args_voidptr)
             strncat(full_buffer, line_buffer, PMEM_STDOUTBUFFERSIZE);
         }
 
-        log_diagnostic("[info]: FFmpeg finished.",
+        log_diagnostic("[info]: FFmpeg exited.",
                         last_diagnostic_type::info,
                         thread_args->_tbuf_group);
     } break;

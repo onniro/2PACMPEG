@@ -116,12 +116,19 @@ platform_thread_wait_for_exit(void *thread_args_voidptr)
     thread_args->_thread_info->stdio_thread_handle = CreateThread(0, 0, 
                                                         platform_thread_read_stdout,
                                                         thread_args_voidptr, 0, 0);
+#if _2PACMPEG_DEBUG
+    if(thread_args->_thread_info->stdio_thread_handle == 
+            INVALID_HANDLE_VALUE) {
+        OutputDebugStringA("[error]: thread received invalid handle.\n");
+    }
+#endif
 
     if(CreateProcessA(0, thread_args->_tbuf_group->command_buffer,
             0, 0, TRUE, CREATE_NO_WINDOW, 0, 0, 
             &thread_args->_thread_info->cmd_stream_startupinfo,
             &thread_args->_thread_info->cmd_stream_processinfo)) {
         thread_args->_rt_vars->ffmpeg_is_running = true;
+
         if(*thread_args->_prog_enum == ffmpeg) {
             log_diagnostic("[info]: FFmpeg started...",
                             last_diagnostic_type::info,
@@ -133,8 +140,9 @@ platform_thread_wait_for_exit(void *thread_args_voidptr)
                 INFINITE);
 
         thread_args->_rt_vars->ffmpeg_is_running = false;
+
         if(*thread_args->_prog_enum == ffmpeg) {
-            log_diagnostic("[info]: FFmpeg finished.",
+            log_diagnostic("[info]: FFmpeg exited.",
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
         }
@@ -356,7 +364,11 @@ WinMain(HINSTANCE instance, HINSTANCE,
     rt_vars.win_height = 540;
     rt_vars.ffmpeg_is_running = false;
     rt_vars.win_ptr = glfwCreateWindow(rt_vars.win_width, rt_vars.win_height, 
+#if !_2PACMPEG_DEBUG
             "2PACMPEG v2.3 - 2PAC 4 LYFE (Definitive Edition)", 
+#else
+            "2PACMPEG v2.3 - 2PAC 4 LYFE (Definitive Edition) (debug)", 
+#endif
             0, 0);
     if(!rt_vars.win_ptr) {
         OutputDebugStringA("null pointer to GLFW window\n");

@@ -1,19 +1,6 @@
 
 /*
-IMPORTANT(14-sep-24): atof() and atoi() on *(only) windows release build*
-(works on debug build) for whatever fucking reason can't convert to their 
-respective data types from whatever ffprobe is outputting
-NOTE: This actually has nothing to do with atof() or atoi() and the
-issue goes away when compiled with -O0 (lmao). As a potential solution
-you could try to declare everything that gets touched by other threads
-as volatile
-
-TODO: mkv format doesn't work (in the meantime you could just add a way 
-for the user to input the length of the video bc why not)
-
-TODO: turn the warning level tf up
-
-FIXME: so.. fvcking.. many.. #ifs... (refactor logging)
+FIXME: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
 */
 
 #include "2pacmpeg.h"
@@ -301,7 +288,7 @@ serialize_preset(s8 *preset_name,
     return result;
 }
 
-//NOTE: preset_name might not be null-terminated
+//NOTE: preset_name might not be null-delimited
 inline void 
 insert_preset_name(preset_table *p_table, s8 *preset_name,
                 int preset_name_length, int insert_index) 
@@ -445,6 +432,23 @@ strip_end_filename(s8 *file_path)
     }
 }
 
+INTERNAL void
+wait_ffprobe_result(text_buffer_group *tbuf_group,
+                    runtime_vars *rt_vars,
+                    platform_thread_info *thread_info)
+{                
+    thread_info->prog_enum = ffprobe;
+
+    //NOTE: *has* to be volatile because otherwise the 
+    //block would be optimized out by genius compiler
+    //(worked when built with -O0) #AbolishMultithreading
+    volatile bool32 *_ffmpeg_is_running = &rt_vars->ffmpeg_is_running;
+    *_ffmpeg_is_running = true;
+    platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars);
+
+    while(*_ffmpeg_is_running);
+}
+
 INTERNAL void 
 argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
                                 runtime_vars *rt_vars,
@@ -452,7 +456,6 @@ argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
                                 char *target_filesize_buffer,
                                 char *bitrate_buf) 
 {
-#define BITRATE_RESULT_BUFSIZE 128
     LOCAL_STATIC char bitrate_result_buffer[BITRATE_RESULT_BUFSIZE] = {0};
 
     ImGui::PushItemWidth(48.0f);
@@ -472,34 +475,25 @@ argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
 
 #if _2PACMPEG_WIN32
                     snprintf(tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
-                            "%sffmpeg\\ffprobe.exe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 \"%s\"",
+                            "%sffmpeg\\ffprobe.exe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"%s\"",
                             tbuf_group->working_directory, tbuf_group->input_path_buffer);
 #elif _2PACMPEG_LINUX
                     snprintf(tbuf_group->command_buffer, PMEM_COMMANDBUFFERSIZE,
-                            "ffprobe -v error -select_streams v:0 -show_entries stream=duration -of default=noprint_wrappers=1:nokey=1 \"%s\"",
+                            "ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"%s\"",
                             tbuf_group->input_path_buffer);
 #endif
 
-                    thread_info->prog_enum = ffprobe;
-                    rt_vars->ffmpeg_is_running = true;
-                    platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars);
-
-                    //TODO: try not to block the main thread
-                    while(rt_vars->ffmpeg_is_running);
-
-#if _2PACMPEG_WIN32 && 0
-                    //TEMPORARY
-                    printf("tbuf_group->ffprobe_buffer:%s\n", tbuf_group->ffprobe_buffer);
-#endif
-
+                    wait_ffprobe_result(tbuf_group, rt_vars, thread_info);
                     f32 media_duration = atof(tbuf_group->ffprobe_buffer);
+
                     if(media_duration) {
                         f32 bitrate_kb = (atof(target_filesize_buffer)*8000.0f) /
                                             media_duration;
-                        sprintf(bitrate_result_buffer, 
-                                "-b:v %.0fk", bitrate_kb);
+                        sprintf(bitrate_result_buffer, "-b:v %.0fk", bitrate_kb);
 
-                        log_diagnostic("[info]: ffprobe finished.", last_diagnostic_type::info, tbuf_group);
+                        log_diagnostic("[info]: ffprobe exited.", 
+                                        last_diagnostic_type::info, 
+                                        tbuf_group);
                     }
                     else {
                         tbuf_group->ffprobe_buffer[0] = 0x0;
@@ -542,7 +536,6 @@ argument_options_count_audio_tracks(text_buffer_group *tbuf_group,
                                     char *target_filesize_buffer,
                                     char *bitrate_buf) 
 {
-#define AUDIO_TRACK_COUNT_BUFSIZE 16
     LOCAL_STATIC char audio_track_count_buf[AUDIO_TRACK_COUNT_BUFSIZE] = {0};
 
     if(ImGui::Button("count audio tracks##count_audio_tracks")) {
@@ -561,18 +554,14 @@ argument_options_count_audio_tracks(text_buffer_group *tbuf_group,
                         tbuf_group->input_path_buffer);
 #endif
 
-                thread_info->prog_enum = ffprobe;
-                rt_vars->ffmpeg_is_running = true;
-                platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars);
-
-                while(rt_vars->ffmpeg_is_running);
+                wait_ffprobe_result(tbuf_group, rt_vars, thread_info);
 
                 if(atoi(tbuf_group->ffprobe_buffer)) {
                     strncpy(audio_track_count_buf, 
                             tbuf_group->ffprobe_buffer,
                             AUDIO_TRACK_COUNT_BUFSIZE);
 
-                    log_diagnostic("[info]: ffprobe finished.", last_diagnostic_type::info, tbuf_group);
+                    log_diagnostic("[info]: ffprobe exited.", last_diagnostic_type::info, tbuf_group);
                 }
                 else {
                     tbuf_group->ffprobe_buffer[0] = 0x0;
@@ -603,7 +592,7 @@ argument_options_count_audio_tracks(text_buffer_group *tbuf_group,
         int user_cmdbuf_len = strlen(tbuf_group->user_cmd_buffer);
 
         if((tbuf_group->user_cmd_buffer[user_cmdbuf_len] != ' ') &&
-                (user_cmdbuf_len < PMEM_USRCOMMANDBUFFERSIZE && 
+                (user_cmdbuf_len < PMEM_USRCOMMANDBUFFERSIZE - 1 && 
                 user_cmdbuf_len > 0)) {
             tbuf_group->user_cmd_buffer[user_cmdbuf_len] = ' ';
             ++user_cmdbuf_len;
