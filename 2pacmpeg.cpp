@@ -441,7 +441,7 @@ wait_ffprobe_result(text_buffer_group *tbuf_group,
 
     //NOTE: *has* to be volatile because otherwise the 
     //block would be optimized out by genius compiler
-    //(worked when built with -O0) #AbolishMultithreading
+    //(worked when built with -O0)
     volatile bool32 *_ffmpeg_is_running = &rt_vars->ffmpeg_is_running;
     *_ffmpeg_is_running = true;
     platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars);
