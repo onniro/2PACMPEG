@@ -1,3 +1,0 @@
-ªi:\mnt\hdd1\videos\convert
-¬compress & merge (2) audio tracks¯-c:v libx264 -b:v 5M -c:a aac -b:a 128k -ac 2 -filter_complex amerge=inputs=2
-¬just merge (2) audio tracks¯-c:v copy -c:a aac -b:a 160k -ac 2 -filter_complex amerge=inputs=2
