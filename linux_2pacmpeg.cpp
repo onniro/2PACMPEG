@@ -6,7 +6,7 @@ not work on certain distributions, or when it is installed using
 certain package managers, and/or when 2PACMPEG is ran as root.
 (TODO: maybe add a warning for this?)
 
-TODO: platform_kill_process here is broken(). i guess killing the shell
+TODO: platform_kill_process() here is broken. i guess killing the shell
 from which ffmpeg is ran doesn't actually kill ffmpeg? (even though
 there's no reason it would detach from said shell)
 */
@@ -130,7 +130,6 @@ platform_thread_read_proc_stdout(void *args_voidptr)
 INTERNAL bool32 
 platform_kill_process(platform_thread_info *thread_info) 
 {
-    //i assume this is safe
     bool32 result = false;
     if(kill(thread_info->proc_id, SIGKILL) != -1) {
         result = true;
@@ -230,9 +229,7 @@ platform_directory_exists(char *directory_name)
 }
 
 INTERNAL bool32 
-platform_read_file(char *file_path, 
-                    char *destination, 
-                    u64 *dest_size) 
+platform_read_file(char *file_path, char *destination, u64 *dest_size) 
 {
     bool32 result = false;
     int file_descriptor = open(file_path, O_RDONLY);
@@ -240,9 +237,7 @@ platform_read_file(char *file_path,
     if(file_descriptor != -1) {
         struct stat stat_buf;
         fstat(file_descriptor, &stat_buf);
-        *dest_size = read(file_descriptor, 
-                        destination, 
-                        stat_buf.st_size);
+        *dest_size = read(file_descriptor, destination, stat_buf.st_size);
         result = (*dest_size == stat_buf.st_size);
 
         close(file_descriptor);
@@ -252,9 +247,7 @@ platform_read_file(char *file_path,
 }
 
 INTERNAL bool32 
-platform_write_file(char *file_path,
-                    void *in_buffer,
-                    u64 buffer_size) 
+platform_write_file(char *file_path, void *in_buffer, u64 buffer_size) 
 {
     bool32 result = false;
     int file_descriptor = open(file_path, 
@@ -262,9 +255,7 @@ platform_write_file(char *file_path,
                         S_IRUSR|S_IWUSR);
 
     if(file_descriptor != -1) {
-        s64 write_status = write(file_descriptor, 
-                                in_buffer, 
-                                buffer_size);  
+        s64 write_status = write(file_descriptor, in_buffer, buffer_size);  
         result = (write_status == buffer_size);
 
         close(file_descriptor);
@@ -273,11 +264,23 @@ platform_write_file(char *file_path,
     return result;
 }
 
+INTERNAL void
+platform_load_font(runtime_vars *rt_vars)
+{
+    char _fontname_buffer[] = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
+    if(platform_file_exists(_fontname_buffer)) {
+        rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
+                                    _fontname_buffer,
+                                    15.0f, 0, 
+                                    ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+    }
+}
+
 int 
 main(int arg_count, char **args) 
 {
     if(!glfwInit()) {
-        fprintf(stderr, "glfwInit() failed.\n");
+        fprintf(stderr, "glfwInit failed.\n");
         return -1;
     }
 
@@ -294,7 +297,7 @@ main(int arg_count, char **args)
                                         0, 0);
 
     if(!rt_vars.win_ptr) {
-        fprintf(stderr, "null pointer to GLFW window\n");
+        fprintf(stderr, "couldn't allocate GLFW window\n");
         return -1;
     }
     platform_thread_info thread_info = {0};
@@ -315,14 +318,7 @@ main(int arg_count, char **args)
     //TODO: do something about thsi
 #if 1
     if(!args[1] || strcmp(args[1], "--use-bitmap-font")) {
-        //char _fontname_buffer[] = "/usr/share/fonts/truetype/noto/LiberationMono-Regular.ttf";
-        char _fontname_buffer[] = "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf";
-        if(platform_file_exists(_fontname_buffer)) {
-            rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-                                        _fontname_buffer,
-                                        14.0f, 0, 
-                                        ImGui::GetIO().Fonts->GetGlyphRangesDefault());
-        }
+        platform_load_font(&rt_vars);
     }
 #endif
 
@@ -381,10 +377,9 @@ main(int arg_count, char **args)
 #endif
 
     while(!glfwWindowShouldClose(rt_vars.win_ptr)) {
-        update_window(&tbuf_group, &p_table, 
-                        &rt_vars, &thread_info);
-        // HYPERBRUH
-        usleep(17);
+        update_window(&tbuf_group, &p_table, &rt_vars, &thread_info);
+        
+        usleep(17);// HYPERBRUH
     }
 
     ImGui_ImplOpenGL3_Shutdown();

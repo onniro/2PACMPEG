@@ -173,10 +173,8 @@ posixapi_get_stdout(char *command, int *output_fd,
         //no idea why the double quotes make it work
         snprintf(_temp, 4095, "''%s''", command);
 
-        //i'm aware that this returns the PID of the shell rather than
-        //the process which it starts but i think that's good enough
-        //(at least for now, since killing the shell also kills its 
-        //subprocesses assuming they didn't detach from the shell)
+        //NOTE: doesn't seem to work if you want to call kill on the 
+        //returned PID later
         execl("/bin/sh", "sh", "-c", _temp, (char *)0);
         perror("execl");
 
