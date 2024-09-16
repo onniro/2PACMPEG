@@ -80,14 +80,24 @@ platform_thread_read_proc_stdout(void *args_voidptr)
                         last_diagnostic_type::info,
                         thread_args->_tbuf_group);
         ssize_t bytes_read = 0;
+        u64 stdout_buffer_size = 0;
 
         while(1) {
             bytes_read = read(thread_args->_thread_info->file_descriptor,
-                            line_buffer,
-                            PMEM_STDOUTLINEBUFFERSIZE);
+                            full_buffer + stdout_buffer_size,
+                            PMEM_STDOUTLINEBUFFERSIZE - 1 - stdout_buffer_size);
             if(!bytes_read) {break;}
+#if 1
+            stdout_buffer_size += bytes_read;
+            full_buffer[stdout_buffer_size] = 0x0;
+
+            if(stdout_buffer_size >= STDOUT_BUFFER_FLUSH_THRESHOLD) {
+                stdout_buffer_size = 0;
+            }
+#else
             line_buffer[bytes_read] = 0x0;
             strncat(full_buffer, line_buffer, PMEM_STDOUTBUFFERSIZE);
+#endif
         }
 
         log_diagnostic("[info]: FFmpeg exited.",

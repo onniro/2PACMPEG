@@ -62,13 +62,36 @@ platform_thread_read_stdout(void *thread_args_voidptr)
     //bit verbose but aight
     switch(*thread_args->_prog_enum) {
     case ffmpeg: {
+        u64 stdout_buffer_size = 0;
+
         while(1) {
             DWORD line_buffer_size;
+#if 1
             if(ReadFile(thread_args->_thread_info->read_handle,
                     thread_args->_tbuf_group->stdout_line_buffer,
                     PMEM_STDOUTLINEBUFFERSIZE, &line_buffer_size, 0)) {
-                strcat(thread_args->_tbuf_group->stdout_buffer,
-                    thread_args->_tbuf_group->stdout_line_buffer);
+                stdout_buffer_size += line_buffer_size;
+                if(stdout_buffer_size >= STDOUT_BUFFER_FLUSH_THRESHOLD) {
+                    thread_args->_tbuf_group->stdout_buffer[0] = 0x0;
+                }
+                
+                strncat(thread_args->_tbuf_group->stdout_buffer,
+                        thread_args->_tbuf_group->stdout_line_buffer, 
+                        PMEM_STDOUTBUFFERSIZE - stdout_buffer_size - 1);
+
+            //NOTE: don't know why the below code doesn't really work as well
+#else
+            if(ReadFile(thread_args->_thread_info->read_handle,
+                    thread_args->_tbuf_group->stdout_buffer + stdout_buffer_size,
+                    KILOBYTES(5), 
+                    &line_buffer_size, 0)) {
+                stdout_buffer_size += line_buffer_size;
+                thread_args->_tbuf_group->stdout_buffer[stdout_buffer_size] = 0x0;
+
+                if(stdout_buffer_size >= STDOUT_BUFFER_FLUSH_THRESHOLD) {
+                    stdout_buffer_size = 0;
+                }
+#endif
             } 
             else {
                 break;

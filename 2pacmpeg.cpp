@@ -812,7 +812,6 @@ basic_controls_update(text_buffer_group *tbuf_group,
     ImGui::InputText("##input_file_name", 
                     tbuf_group->input_path_buffer,
                     PMEM_INPUTPATHBUFFERSIZE);
-
 #endif
 
     if(ImGui::Button("toggle argument options##arg_options")) {
