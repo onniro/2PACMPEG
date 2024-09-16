@@ -879,6 +879,7 @@ basic_controls_update(text_buffer_group *tbuf_group,
     ImGui::InputText("##default_output_path",
                     tbuf_group->default_path_buffer,
                     PMEM_OUTPUTPATHBUFFERSIZE);
+
     if(ImGui::Button("set as default folder")) {
         if(tbuf_group->default_path_buffer[0]) {
             tbuf_group->diagnostic_buffer[0] = 0x0;
@@ -890,6 +891,19 @@ basic_controls_update(text_buffer_group *tbuf_group,
                         last_diagnostic_type::error,
                         tbuf_group);
         }
+    }
+
+    ImGui::SameLine();
+
+    //FIXME: this seems to do what i want it to do, but for some reason
+    //save_default_output_path() stops giving diagnostics
+    if(ImGui::Button("remove##remove_default_outputpath")) {
+        memset(tbuf_group->default_path_buffer, 0, 
+                strlen(tbuf_group->default_path_buffer));
+
+        save_default_output_path(tbuf_group, p_table);
+
+        tbuf_group->diagnostic_buffer[0] = 0x0;
     }
 
     if(ImGui::Button("start FFmpeg")) {
