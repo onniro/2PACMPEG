@@ -1,26 +1,9 @@
 
 #if !defined(_2PACMPEG_DOT_H)
 
-#include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_opengl3.h"
-
-#define GL_SILENCE_DEPRECATION
-#if _2PACMPEG_WIN32
-    #define GLFW_EXPOSE_NATIVE_WIN32
-#elif _2PACMPEG_LINUX
-    #define GLFW_EXPOSE_NATIVE_X11
-#endif
-
-#include "GLFW/glfw3.h"
-#include "GLFW/glfw3native.h"
-
-#include "thangz.h"
-
 #define PMEMORY_AMT MEGABYTES(7)
 
 //lol
-//make the standard output buffer resize itself if necessary
 #define PMEM_STDOUTBUFFERSIZE MEGABYTES((u64)5)
 #define PMEM_STDOUTLINEBUFFERSIZE KILOBYTES((u64)500)
 #define PMEM_CONFIGBUFFERSIZE KILOBYTES((u64)50)
@@ -108,6 +91,8 @@ struct platform_thread_info;
 //////////////////////
 
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
+INTERNAL void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list);
+INTERNAL text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group);
 INTERNAL last_diagnostic_type log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);
 INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table);
 inline void adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index, int subtract_from_ceil);

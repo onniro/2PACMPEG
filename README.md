@@ -31,12 +31,17 @@ to waste money on nitro.</p>
 note: if you have not set a default path and also only specify the output filename, the file will be output to the containing folder of the ffmpeg executable
 - click on start to launch FFmpeg with currently set arguments
 
-## 3. build dependencies 
+## 3.1 build dependencies 
 - clang++ (MinGW build in my case) with windows headers and libs
   (e.g <https://github.com/mstorsjo/llvm-mingw>)
 - ImGui (included)
 - GLFW3 (included)
 - (probably could build just fine with other compilers like MSVC but i haven't looked into that)
+
+## 3.2 actually building
+- on Windows: cd DRIVE:\dir\to\2pacmpeg && release.bat
+- on Linux: cd /dir/to/2pacmpeg && sh release.sh
+- (for debug, run compile_imgui.bat/sh **once** and then build with build.bat/sh)
 
 ## 4. credits 
 - thanks to mastermind graphix designer Karkagami for the icon(s) <3

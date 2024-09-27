@@ -1,16 +1,4 @@
 
-/*
-NOTE: the loonix version assumes that ffmpeg is already installed
-and can be found from some $PATH directory. hence, this might
-not work on certain distributions, or when it is installed using
-certain package managers, and/or when 2PACMPEG is ran as root.
-(TODO: maybe add a warning for this?)
-
-TODO: platform_kill_process() here is broken. i guess killing the shell
-from which ffmpeg is ran doesn't actually kill ffmpeg? (even though
-there's no reason it would detach from said shell)
-*/
-
 #define _2PACMPEG_LINUX 1
 #undef _2PACMPEG_WIN32
 
@@ -23,6 +11,18 @@ there's no reason it would detach from said shell)
 #include "fcntl.h"
 #include "pthread.h"
 #include "stdlib.h"
+
+#if _2PACMPEG_DEBUG
+    #include "errno.h"
+#endif
+
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
+#define GLFW_EXPOSE_NATIVE_X11
+#include "GLFW/glfw3.h"
+#include "GLFW/glfw3native.h"
 
 #define THANGZ_POSIXAPI_HELPERS 1
 #include "thangz.h"
@@ -86,9 +86,8 @@ platform_thread_read_proc_stdout(void *args_voidptr)
             bytes_read = read(thread_args->_thread_info->file_descriptor,
                             line_buffer,
                             PMEM_STDOUTLINEBUFFERSIZE - 1);
-            if(!bytes_read) {
-                break;
-            }
+            if(!bytes_read) {break;}
+            stdout_buffer_bytes += bytes_read;
             if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
                 full_buffer[0] = 0x0;
                 stdout_buffer_bytes = 0;
@@ -126,6 +125,8 @@ platform_thread_read_proc_stdout(void *args_voidptr)
     default: break;
     }
 
+    waitpid(thread_args->_thread_info->proc_id, 0, 0);
+
     if(fcntl(thread_args->_thread_info->file_descriptor, F_GETFD) != -1) {
         close(thread_args->_thread_info->file_descriptor);
     }
@@ -139,9 +140,15 @@ INTERNAL bool32
 platform_kill_process(platform_thread_info *thread_info) 
 {
     bool32 result = false;
-    if(kill(thread_info->proc_id, SIGKILL) != -1) {
+    //pid + 1 works lmao?
+    if(-1 != kill(thread_info->proc_id + 1, SIGKILL)) {
         result = true;
     }
+#if _2PACMPEG_DEBUG
+    else {
+        printf("errno=%i:%s\n", errno, strerror(errno));
+    }
+#endif
 
     return result;
 }
@@ -156,7 +163,6 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
             tbuf_group->command_buffer);
 #endif
 
-    //TODO: testing n shieet
     LOCAL_STATIC linux_thread_args thread_args;
     thread_args._tbuf_group =   tbuf_group;
     thread_args._thread_info =  thread_info;
@@ -301,7 +307,11 @@ main(int arg_count, char **args)
     rt_vars.ffmpeg_is_running = false;
     rt_vars.win_ptr = glfwCreateWindow(rt_vars.win_width, 
                                         rt_vars.win_height, 
+#if _2PACMPEG_DEBUG
+                                        "(debug) 2PACMPEG v2.3 - 2PAC 4 LYFE (Definitive Edition)", 
+#else
                                         "2PACMPEG v2.3 - 2PAC 4 LYFE (Definitive Edition)", 
+#endif
                                         0, 0);
 
     if(!rt_vars.win_ptr) {
@@ -312,6 +322,9 @@ main(int arg_count, char **args)
 
     glfwMakeContextCurrent(rt_vars.win_ptr);
     glfwSwapInterval(0); // NOTE: it seems like this call was being ignored before
+    glfwSetDropCallback(rt_vars.win_ptr, 
+                        (GLFWdropfun)glfw_drop_callback);
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
@@ -339,15 +352,15 @@ main(int arg_count, char **args)
 
     text_buffer_group tbuf_group = {0};
     tbuf_group.input_path_buffer =      (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
-    tbuf_group.command_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
-    tbuf_group.temp_buffer =            (s8 *)heapbuf_alloc_region(&p_memory, PMEM_TEMPBUFFERSIZE);
     tbuf_group.user_cmd_buffer =        (s8 *)heapbuf_alloc_region(&p_memory, PMEM_USRCOMMANDBUFFERSIZE);
     tbuf_group.output_path_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
     tbuf_group.default_path_buffer =    (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE); // no this is not an accident (but it is retarded)
-    tbuf_group.stdout_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
-    tbuf_group.stdout_line_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
-    tbuf_group.config_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE);
     tbuf_group.wchar_input_buffer =     (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
+    tbuf_group.command_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
+    tbuf_group.temp_buffer =            (s8 *)heapbuf_alloc_region(&p_memory, PMEM_TEMPBUFFERSIZE);
+    tbuf_group.config_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE);
+    tbuf_group.stdout_line_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
+    tbuf_group.stdout_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
 
     // ?? ok
     if(tbuf_group.default_path_buffer) {
@@ -368,6 +381,8 @@ main(int arg_count, char **args)
         sprintf(tbuf_group.config_path, 
                 "%sPRESETFILE", tbuf_group.working_directory);
     }
+
+    set_text_buffer_group_ptr(&tbuf_group);
 
     preset_table p_table = {0};
     p_table.capacity = MAX_PRESETS;

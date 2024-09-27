@@ -1,9 +1,9 @@
 
 /*
-TODO: drag 'n drop 
 FIXME: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
 */
 
+#include "thangz.h"
 #include "2pacmpeg.h"
 
 inline void *
@@ -20,8 +20,41 @@ heapbuf_alloc_region(program_memory *pool, u64 region_size)
     return result;
 }
 
+INTERNAL void
+glfw_drop_callback(GLFWwindow *win_ptr, 
+                    int path_count, 
+                    char **path_list)
+{
+    LOCAL_STATIC text_buffer_group *tbuf_group = 
+            get_text_buffer_group_ptr(0);
+
+    if(tbuf_group) {
+        strncpy(tbuf_group->input_path_buffer,
+                path_list[0],
+                PMEM_INPUTPATHBUFFERSIZE);
+    }
+}
+
+//this is so dumb
+#define set_text_buffer_group_ptr(ptr) get_text_buffer_group_ptr(ptr)
+
+INTERNAL text_buffer_group *
+get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group) 
+{
+    LOCAL_STATIC text_buffer_group *out_tbuf_group = 0;
+
+    if(in_tbuf_group) {
+        out_tbuf_group = in_tbuf_group;
+        return 0;
+    }
+
+    return out_tbuf_group;
+}
+
 INTERNAL last_diagnostic_type 
-log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group) 
+log_diagnostic(s8 *message, 
+            last_diagnostic_type type, 
+            text_buffer_group *tbuf_group) 
 {
     LOCAL_STATIC last_diagnostic_type last_diagnostic = undefined;
     
@@ -33,7 +66,6 @@ log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_g
     }
 
     if(type != undefined) {last_diagnostic = type;}
-    //last_diagnostic = type;
  
     return last_diagnostic;
 }
@@ -431,9 +463,6 @@ wait_ffprobe_result(text_buffer_group *tbuf_group,
 {                
     thread_info->prog_enum = ffprobe;
 
-    //NOTE: *has to be volatile* because otherwise the 
-    //block would be optimized out by genius compiler
-    //(works without this when built with -O0)
     volatile bool32 *_ffmpeg_is_running = &rt_vars->ffmpeg_is_running;
     *_ffmpeg_is_running = true;
     platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars);
@@ -443,10 +472,10 @@ wait_ffprobe_result(text_buffer_group *tbuf_group,
 
 INTERNAL void 
 argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
-                                    runtime_vars *rt_vars,
-                                    platform_thread_info *thread_info,
-                                    char *target_filesize_buffer,
-                                    char *bitrate_buf) 
+                                runtime_vars *rt_vars,
+                                platform_thread_info *thread_info,
+                                char *target_filesize_buffer,
+                                char *bitrate_buf) 
 {
     LOCAL_STATIC char bitrate_result_buffer[BITRATE_RESULT_BUFSIZE] = {0};
 
@@ -926,7 +955,17 @@ basic_controls_update(text_buffer_group *tbuf_group,
             if(platform_kill_process(thread_info)) {
                 rt_vars->ffmpeg_is_running = false;
 
-                log_diagnostic("[info]: FFmpeg terminated.", last_diagnostic_type::info, tbuf_group);
+/*
+                FIXME(27 sep '24) if ffmpeg actually does get killed normally,
+                this message will never appear. it gets overwritten by "FFmpeg exited"
+                during the same frame.
+                **seeing this message in any case really means the total opposite
+                of what it says.** 
+*/
+                log_diagnostic("[info]: FFmpeg killed.", last_diagnostic_type::info, tbuf_group);
+            }
+            else {
+                log_diagnostic("[bug]: FFmpeg could not be killed for an unknown reason.", last_diagnostic_type::error, tbuf_group);
             }
         }
         else {

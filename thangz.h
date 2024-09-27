@@ -11,8 +11,6 @@
     #pragma clang diagnostic ignored "-Wwritable-strings"
 #endif
 
-// macros and shit
-
 #if !defined(INTERNAL)
     #define INTERNAL static
 #else
@@ -45,8 +43,6 @@
 
 #define ARRAY_COUNT(array) (sizeof(array) / sizeof(array[0]))
 #define XORSWAP(x, y) x ^= y; y ^= x; x ^= y
-
-// typedefs
 
 typedef char         s8;
 typedef short        s16;
@@ -140,28 +136,28 @@ mem_set_value(void *destination, u8 value, u64 bytes)
 #include "string.h"
 
 THANGZ_INTERNAL bool32 
-posixapi_get_stdout(char *command, int *output_fd, 
-                    pid_t *proc_id, bool32 include_stderr) 
+posixapi_get_stdout(char *command, 
+                    int *output_fd, 
+                    pid_t *proc_id, 
+                    bool32 include_stderr) 
 {
     bool32 result = false;
 
     int pipe_fd[2];
-    if(pipe(pipe_fd) == -1) {
+    if(-1 == pipe(pipe_fd)) {
         perror("pipe");
         _exit(1);
     }
 
     *proc_id = fork();
-    if(*proc_id == -1) {
-        perror("fork");
-#if 0
-        ASSERT_CRASH();
-#else
-        _exit(1);
+#if _2PACMPEG_DEBUG
+    printf("*proc_id=%i\n", *proc_id);
 #endif
-    }
-
-    if(!*proc_id) {
+    if(-1 == *proc_id) {
+        perror("fork");
+        _exit(1);
+    } 
+    else if(0 == *proc_id) {
         close(pipe_fd[STDIN_FILENO]);
         dup2(pipe_fd[STDOUT_FILENO], STDOUT_FILENO);
         if(include_stderr) {
@@ -169,12 +165,9 @@ posixapi_get_stdout(char *command, int *output_fd,
         }
         close(pipe_fd[STDOUT_FILENO]);
 
-        char _temp[4096];
-        //no idea why the double quotes make it work
-        snprintf(_temp, 4095, "''%s''", command);
+        char _temp[1024*8];
+        snprintf(_temp, (1024*8) - 1, "''%s''", command);
 
-        //NOTE: doesn't seem to work if you want to call kill on the 
-        //returned PID later
         execl("/bin/sh", "sh", "-c", _temp, (char *)0);
         perror("execl");
 

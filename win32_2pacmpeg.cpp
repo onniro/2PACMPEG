@@ -12,6 +12,14 @@
 
 #include "stdio.h"
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include "GLFW/glfw3.h"
+#include "GLFW/glfw3native.h"
+
 #include "thangz.h"
 #include "2pacmpeg.h"
 #include "win32_2pacmpeg.h"
@@ -62,22 +70,22 @@ platform_thread_read_stdout(void *thread_args_voidptr)
     //bit verbose but aight
     switch(*thread_args->_prog_enum) {
     case ffmpeg: {
-        u64 sdtout_buffer_bytes = 0;
+        u64 stdout_buffer_bytes = 0;
 
         while(1) {
             DWORD line_buffer_size;
             if(ReadFile(thread_args->_thread_info->read_handle,
                     thread_args->_tbuf_group->stdout_line_buffer,
                     PMEM_STDOUTLINEBUFFERSIZE - 1, &line_buffer_size, 0)) {
-                sdtout_buffer_bytes += line_buffer_size;
-                if(sdtout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
+                stdout_buffer_bytes += line_buffer_size;
+                if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
                     thread_args->_tbuf_group->stdout_buffer[0] = 0x0;
                     stdout_buffer_bytes = 0;
                 }
                 
                 strncat(thread_args->_tbuf_group->stdout_buffer,
                         thread_args->_tbuf_group->stdout_line_buffer, 
-                        PMEM_STDOUTBUFFERSIZE - sdtout_buffer_bytes - 1);
+                        PMEM_STDOUTBUFFERSIZE - stdout_buffer_bytes - 1);
             } 
             else {
                 break;
@@ -386,7 +394,10 @@ WinMain(HINSTANCE instance, HINSTANCE,
     platform_thread_info thread_info = {0};
 
     glfwMakeContextCurrent(rt_vars.win_ptr);
-    glfwSwapInterval(0); //NOTE: seems like this just doesnt work?
+    glfwSwapInterval(0); //NOTE: this just doesn't work or what?
+    glfwSetDropCallback(rt_vars.win_ptr, 
+                        (GLFWdropfun)glfw_drop_callback);
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
 
@@ -445,6 +456,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
         sprintf(tbuf_group.config_path, 
                 "%sPRESETFILE", tbuf_group.working_directory);
     }
+
+    set_text_buffer_group_ptr(&tbuf_group);
 
     preset_table p_table = {0};
     p_table.capacity = MAX_PRESETS;
