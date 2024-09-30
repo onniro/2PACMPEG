@@ -87,6 +87,9 @@ platform_thread_read_proc_stdout(void *args_voidptr)
                             line_buffer,
                             PMEM_STDOUTLINEBUFFERSIZE - 1);
             if(!bytes_read) {break;}
+
+            //this causes behavior that makes me question my understanding of read()
+            //line_buffer[bytes_read] = 0x0;
             stdout_buffer_bytes += bytes_read;
             if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
                 full_buffer[0] = 0x0;
@@ -251,7 +254,9 @@ platform_read_file(char *file_path, char *destination, u64 *dest_size)
     if(file_descriptor != -1) {
         struct stat stat_buf;
         fstat(file_descriptor, &stat_buf);
-        *dest_size = read(file_descriptor, destination, stat_buf.st_size);
+        *dest_size = read(file_descriptor, 
+                        destination, 
+                        stat_buf.st_size);
         result = (*dest_size == stat_buf.st_size);
 
         close(file_descriptor);

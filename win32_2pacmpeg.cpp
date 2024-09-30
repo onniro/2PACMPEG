@@ -78,6 +78,7 @@ platform_thread_read_stdout(void *thread_args_voidptr)
                     thread_args->_tbuf_group->stdout_line_buffer,
                     PMEM_STDOUTLINEBUFFERSIZE - 1, &line_buffer_size, 0)) {
                 stdout_buffer_bytes += line_buffer_size;
+
                 if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
                     thread_args->_tbuf_group->stdout_buffer[0] = 0x0;
                     stdout_buffer_bytes = 0;
@@ -101,9 +102,8 @@ platform_thread_read_stdout(void *thread_args_voidptr)
             if(ReadFile(thread_args->_thread_info->read_handle,
                     temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE, 
                     &line_buffer_size, 0)) {
-#if 1
                 temp_buffer[line_buffer_size] = 0x0;
-#endif
+
                 strncat(thread_args->_tbuf_group->ffprobe_buffer,
                         temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE);
             } 

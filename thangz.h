@@ -77,9 +77,7 @@ string_length(s8 *string)
 {
     u32 count = 0;
     if(string) {
-        while(*string++) {
-            ++count;
-        }
+        while(*string++) {++count;}
     }
 
     return count;
@@ -136,10 +134,8 @@ mem_set_value(void *destination, u8 value, u64 bytes)
 #include "string.h"
 
 THANGZ_INTERNAL bool32 
-posixapi_get_stdout(char *command, 
-                    int *output_fd, 
-                    pid_t *proc_id, 
-                    bool32 include_stderr) 
+posixapi_get_stdout(char *command, int *output_fd, 
+                    pid_t *proc_id, bool32 include_stderr) 
 {
     bool32 result = false;
 
@@ -150,9 +146,6 @@ posixapi_get_stdout(char *command,
     }
 
     *proc_id = fork();
-#if _2PACMPEG_DEBUG
-    printf("*proc_id=%i\n", *proc_id);
-#endif
     if(-1 == *proc_id) {
         perror("fork");
         _exit(1);

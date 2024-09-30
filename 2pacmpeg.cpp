@@ -384,7 +384,7 @@ remove_preset(preset_table *p_table,
         adjust_pointer_table(p_table, tbuf_group, rm_index, 1);
 
         p_table->command_table[p_table->entry_amount - 1] = 0;
-    } 
+    }
     else {
         memset(whole_preset, 0, preset_length);
 
@@ -796,6 +796,7 @@ basic_controls_update(text_buffer_group *tbuf_group,
                     runtime_vars *rt_vars, 
                     platform_thread_info *thread_info) 
 {
+    //NOTE: could add a volatile pointer to ffmpeg_is_running just in case
     LOCAL_STATIC s8 preset_name_buffer[PRESETNAME_PITCH - 1] = {0};
     LOCAL_STATIC s8 target_filesize_buffer[SMALL_TEXTBUF_SIZE];
     LOCAL_STATIC s8 bitrate_buffer[SMALL_TEXTBUF_SIZE];
@@ -940,10 +941,23 @@ basic_controls_update(text_buffer_group *tbuf_group,
 
     ImGui::SameLine();
     if(ImGui::Button("clear output##clear_output")) {
+#if 0
+        if(!rt_vars->ffmpeg_is_running) {
+            tbuf_group->diagnostic_buffer[0] = 0x0;
+
+            memset(tbuf_group->stdout_buffer, 0, strlen(tbuf_group->stdout_buffer));
+            memset(tbuf_group->stdout_line_buffer, 0, strlen(tbuf_group->stdout_line_buffer));
+        }
+        else {
+            log_diagnostic("wait for FFmpeg to finish.", 
+                    last_diagnostic_type::error, tbuf_group);
+        }
+#else
         tbuf_group->diagnostic_buffer[0] = 0x0;
 
         memset(tbuf_group->stdout_buffer, 0, strlen(tbuf_group->stdout_buffer));
         memset(tbuf_group->stdout_line_buffer, 0, strlen(tbuf_group->stdout_line_buffer));
+#endif
     }
 
     ImGui::SameLine(ImGui::GetColumnWidth() - 
