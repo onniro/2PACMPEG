@@ -43,8 +43,8 @@ note: if you have not set a default path and also only specify the output filena
 
 ## 3.2 actually building
 - add clang++ to %PATH%/$PATH
-- on Windows: cd DRIVE:\dir\to\2pacmpeg && release.bat
-- on Linux: cd /dir/to/2pacmpeg && sh release.sh
+- on Windows: cd DRIVE:\path\to\2pacmpeg && release.bat
+- on Linux: cd /path/to/2pacmpeg && sh release.sh
 - (for debug, run compile_imgui.bat/sh **once** and then build with build.bat/sh)
 
 ## 4. credits 
