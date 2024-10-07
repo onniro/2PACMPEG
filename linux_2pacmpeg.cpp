@@ -405,9 +405,14 @@ main(int arg_count, char **args)
 #endif
 
     while(!glfwWindowShouldClose(rt_vars.win_ptr)) {
+        uint64_t start_timestamp = posixapi_get_timestamp();
+
         update_window(&tbuf_group, &p_table, &rt_vars, &thread_info);
+
+        uint64_t end_timestamp = posixapi_get_timestamp();
+        uint64_t delta_time = end_timestamp - start_timestamp;
         
-        usleep(17);// HYPERBRUH
+        usleep(MAX_FRAMETIME_MICROSECONDS - (useconds_t)delta_time);
     }
 
     ImGui_ImplOpenGL3_Shutdown();

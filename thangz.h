@@ -132,6 +132,20 @@ mem_set_value(void *destination, u8 value, u64 bytes)
 #include "sys/types.h"
 #include "sys/wait.h"
 #include "string.h"
+#include "time.h"
+
+//(microseconds)
+static uint64_t
+posixapi_get_timestamp(void) 
+{
+    uint64_t result;
+    struct timespec tspec = {0};
+    clock_gettime(CLOCK_MONOTONIC, &tspec);
+
+    result = (tspec.tv_sec*1000000) + (tspec.tv_nsec / 1000);
+
+    return result;
+}
 
 THANGZ_INTERNAL bool32 
 posixapi_get_stdout(char *command, int *output_fd, 

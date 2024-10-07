@@ -32,6 +32,8 @@
 #define TOKEN_PRESETNAME (char)0xAC
 #define TOKEN_PRESETCMD (char)0xAF
 
+#define MAX_FRAMETIME_MICROSECONDS (useconds_t)16667 //(for 60 fps)
+
 struct program_memory {
     void *memory;
     void *write_ptr;
