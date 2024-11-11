@@ -87,8 +87,7 @@ platform_thread_read_stdout(void *thread_args_voidptr)
                 strncat(thread_args->_tbuf_group->stdout_buffer,
                         thread_args->_tbuf_group->stdout_line_buffer, 
                         PMEM_STDOUTBUFFERSIZE - stdout_buffer_bytes - 1);
-            } 
-            else {
+            } else {
                 break;
             }
         }
@@ -106,8 +105,7 @@ platform_thread_read_stdout(void *thread_args_voidptr)
 
                 strncat(thread_args->_tbuf_group->ffprobe_buffer,
                         temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE);
-            } 
-            else {
+            } else {
                 break;
             }
         }
@@ -163,8 +161,7 @@ platform_thread_wait_for_exit(void *thread_args_voidptr)
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
         }
-    } 
-    else {
+    } else {
         log_diagnostic("[fatal error]: process failed to start.",
                         last_diagnostic_type::error,
                         thread_args->_tbuf_group);
@@ -489,7 +486,7 @@ WinMain(HINSTANCE instance, HINSTANCE,
         update_window(&tbuf_group, &p_table, 
                         &rt_vars, &thread_info);
         // HYPERBRUH
-        Sleep(17);
+        Sleep(16);
     }
 
     ImGui_ImplOpenGL3_Shutdown();
@@ -503,5 +500,5 @@ WinMain(HINSTANCE instance, HINSTANCE,
         TerminateProcess(thread_info.cmd_stream_processinfo.hProcess, PROCESS_TERMINATE);
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }

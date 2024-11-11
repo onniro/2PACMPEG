@@ -3,8 +3,8 @@
 set SOURCES=%CD%\deps\imgui\imgui*.cpp %CD%\win32_2pacmpeg.cpp
 REM set SOURCES=%CD%\win32_2pacmpeg.cpp
 REM set OBJ_FILES=%CD%\imgui_o_files\*.o
-set INCLUDE_DIRS=-I%CD%\deps -I%CD%\deps\imgui -I%CD%\deps\glfw
-set LINK_DIRS=-L %CD%\deps\GLFW
+set INCLUDE_DIRS=-I%CD%\deps -I%CD%\deps\imgui -I%CD%\deps\GLFW
+set LINK_DIRS=-L %CD%\deps\GLFW\win32
 set LINK_LIBS=-static-libstdc++ -static -lunwind -lopengl32 -lgdi32 -lshell32 -lole32 -lglfw3 -lcomctl32 -luuid -lwinmm -lshlwapi
 set MISC_FLAGS=-fno-cxx-exceptions -fno-exceptions -target x86_64-pc-windows-gnu -march=x86-64 -O2 -s -o 2PACMPEG.EXE -Wl,/subsystem:windows,/opt:ref
 

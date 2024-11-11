@@ -59,12 +59,14 @@ typedef double f64;
 
 typedef int bool32;
 
-typedef struct {
+typedef struct 
+{
     f32 x;
     f32 y;
 } vec2;
 
-typedef struct {
+typedef struct 
+{
     f32 x;
     f32 y;
     f32 z;
@@ -163,8 +165,7 @@ posixapi_get_stdout(char *command, int *output_fd,
     if(-1 == *proc_id) {
         perror("fork");
         _exit(1);
-    } 
-    else if(0 == *proc_id) {
+    } else if(0 == *proc_id) {
         close(pipe_fd[STDIN_FILENO]);
         dup2(pipe_fd[STDOUT_FILENO], STDOUT_FILENO);
         if(include_stderr) {
@@ -179,8 +180,7 @@ posixapi_get_stdout(char *command, int *output_fd,
         perror("execl");
 
         _exit(1);
-    } 
-    else {
+    } else {
         close(pipe_fd[STDOUT_FILENO]);
         *output_fd = pipe_fd[STDIN_FILENO];
 

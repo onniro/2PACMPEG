@@ -34,13 +34,15 @@
 
 #define MAX_FRAMETIME_MICROSECONDS (useconds_t)16667 //(for 60 fps)
 
-struct program_memory {
+struct program_memory 
+{
     void *memory;
     void *write_ptr;
     u64 capacity;
 };
 
-struct runtime_vars {
+struct runtime_vars 
+{
     int win_width;
     int win_height;
     GLFWwindow *win_ptr;
@@ -48,20 +50,23 @@ struct runtime_vars {
     ImFont *default_font;
 };
 
-enum last_diagnostic_type {
+enum last_diagnostic_type 
+{
     undefined = 0,
     error, 
     info
 };
 
-enum program_enum {
+enum program_enum 
+{
     ffmpeg = 0,
     ffprobe,
     ffplay,
     other
 };
 
-struct text_buffer_group {
+struct text_buffer_group 
+{
     s8 *command_buffer;
     s8 *input_path_buffer;
     s8 *output_path_buffer;
@@ -81,7 +86,8 @@ struct text_buffer_group {
     s8 *ffprobe_buffer;
 };
 
-struct preset_table {
+struct preset_table 
+{
     int entry_amount;
     int capacity;
     s8 **command_table; //array of pointers that all point to places in text_buffer_group::config_buffer

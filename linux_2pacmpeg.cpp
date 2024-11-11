@@ -209,8 +209,7 @@ platform_get_working_directory(char *destination, uint32_t buffer_size)
             --char_index) {
         if(destination[char_index] != '/') {
             destination[char_index] = 0x0;
-        }
-        else {
+        } else {
             break;
         }
     }
@@ -412,7 +411,9 @@ main(int arg_count, char **args)
         uint64_t end_timestamp = posixapi_get_timestamp();
         uint64_t delta_time = end_timestamp - start_timestamp;
         
-        usleep(MAX_FRAMETIME_MICROSECONDS - (useconds_t)delta_time);
+        if(delta_time < MAX_FRAMETIME_MICROSECONDS) {
+            usleep(MAX_FRAMETIME_MICROSECONDS - (useconds_t)delta_time);
+        }
     }
 
     ImGui_ImplOpenGL3_Shutdown();

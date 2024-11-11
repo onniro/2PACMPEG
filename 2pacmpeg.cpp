@@ -137,8 +137,7 @@ load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table)
                     p_table->command_table[p_table->entry_amount] = ++cmd_ptr;
 
                     ++p_table->entry_amount;
-                } 
-                else {
+                } else {
 #if _2PACMPEG_DEBUG
     #if _2PACMPEG_WIN32
                     OutputDebugStringA("[exception]: expected preset command token after name token, found 2 names back-to-back.\n");
@@ -149,8 +148,7 @@ load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table)
 
                     break;
                 }
-            } 
-            else {
+            } else {
 #if _2PACMPEG_DEBUG
     #if _2PACMPEG_WIN32
                 OutputDebugStringA("[info]: finished parsing preset file.\n");
@@ -169,8 +167,7 @@ load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table)
         log_diagnostic(_temp_buf,
                         last_diagnostic_type::info,
                         tbuf_group);
-    } 
-    else {
+    } else {
         log_diagnostic("[info]: preset file doesn't exist or couldn't be loaded.",
                         last_diagnostic_type::undefined,
                         tbuf_group);
@@ -191,7 +188,7 @@ adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group,
                     int rm_index = 0, int subtract_from_ceil = 0) 
 {
     for(int move_index = rm_index;
-            move_index < p_table->entry_amount - subtract_from_ceil;
+            move_index < (p_table->entry_amount - subtract_from_ceil);
             ++move_index) {
         if(!move_index) {
             p_table->command_table[0] = 
@@ -200,8 +197,7 @@ adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group,
             if(p_table->command_table[0]) {
                 p_table->command_table[0] += 1;
             }
-        } 
-        else {
+        } else {
             p_table->command_table[move_index] = 
                     strchr(p_table->command_table[move_index - 1], 
                             TOKEN_PRESETCMD);
@@ -233,8 +229,7 @@ save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table)
                     "%c%s\n%s\0",
                     TOKEN_OUTPUTDIR, tbuf_group->default_path_buffer,
                     tbuf_group->temp_buffer);
-        } 
-        else {
+        } else {
             strncpy(tbuf_group->temp_buffer, tbuf_group->config_buffer,
                     PMEM_TEMPBUFFERSIZE);
             tbuf_group->temp_buffer[strlen(tbuf_group->temp_buffer)] = 0x0;
@@ -246,8 +241,7 @@ save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table)
 
             adjust_pointer_table(p_table, tbuf_group);
         }
-    } 
-    else {
+    } else {
         snprintf(tbuf_group->config_buffer, PMEM_CONFIGBUFFERSIZE,
                 "%c%s\n\0",
                 TOKEN_OUTPUTDIR, tbuf_group->default_path_buffer);
@@ -259,8 +253,7 @@ save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table)
         log_diagnostic("[info]: configuration updated. (default output folder saved).\n",
                         last_diagnostic_type::info,
                         tbuf_group);
-    }
-    else {
+    } else {
         log_diagnostic("[file write error]: updating configuration failed.\n",
                         last_diagnostic_type::error,
                         tbuf_group);
@@ -294,8 +287,7 @@ serialize_preset(s8 *preset_name, s8 *preset_command, text_buffer_group *tbuf_gr
         printf("[info]: configuration updated. (preset added).\n");
     #endif
 #endif
-    } 
-    else {
+    } else {
 #if _2PACMPEG_WIN32
         char __diagnostic[128];
         sprintf(__diagnostic, 
@@ -357,14 +349,14 @@ remove_preset(preset_table *p_table,
 #if _2PACMPEG_WIN32
         MessageBoxA(0, 
                     "Failed to retrieve the length of the command.\n(You can continue using the program normally, but the preset could not be deleted)",
-                    "CONFIG ERROR",
+                    "Preset error",
                     MB_OK|MB_ICONERROR);
 #endif
 
         return;
     }
 
-    if(rm_index != p_table->entry_amount - 1) {
+    if(rm_index != (p_table->entry_amount - 1)) {
         u32 cmdbuf_end_bytes = strlen(p_table->command_table[rm_index + 1]) + 
                                     strlen(p_table->name_array + ((rm_index + 1) * PRESETNAME_PITCH)) + 2;
         memset(whole_preset, 0, preset_length);
@@ -384,8 +376,7 @@ remove_preset(preset_table *p_table,
         adjust_pointer_table(p_table, tbuf_group, rm_index, 1);
 
         p_table->command_table[p_table->entry_amount - 1] = 0;
-    }
-    else {
+    } else {
         memset(whole_preset, 0, preset_length);
 
         s8 *rm_preset_name = p_table->name_array + (rm_index*PRESETNAME_PITCH);
@@ -401,8 +392,7 @@ remove_preset(preset_table *p_table,
         log_diagnostic("[info]: configuration updated. (preset deleted)",
                         last_diagnostic_type::info,
                         tbuf_group);
-    } 
-    else {
+    } else {
 #if _2PACMPEG_WIN32
         char __diagnostic[512];
         snprintf(__diagnostic, 512,
@@ -426,9 +416,7 @@ remove_preset(preset_table *p_table,
 inline bool32 
 check_duplicate_presetname(preset_table *p_table, s8 *p_name) 
 {
-    for(int name_index = 0;
-            name_index < p_table->entry_amount;
-            ++name_index) {
+    for(int name_index = 0; name_index < p_table->entry_amount; ++name_index) {
         if(strcmp(p_name, p_table->name_array + (name_index * 
                                 PRESETNAME_PITCH)) == 0) {
             return true;
@@ -459,8 +447,8 @@ strip_end_filename(s8 *file_path)
 INTERNAL void
 wait_ffprobe_result(text_buffer_group *tbuf_group,
                     runtime_vars *rt_vars,
-                    platform_thread_info *thread_info)
-{                
+                    platform_thread_info *thread_info) 
+{
     thread_info->prog_enum = ffprobe;
 
     volatile bool32 *_ffmpeg_is_running = &rt_vars->ffmpeg_is_running;
@@ -515,22 +503,18 @@ argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
                         log_diagnostic("[info]: ffprobe exited.", 
                                         last_diagnostic_type::info, 
                                         tbuf_group);
-                    }
-                    else {
+                    } else {
                         tbuf_group->ffprobe_buffer[0] = 0x0;
 
                         log_diagnostic("failed to retrieve media stream duration.", last_diagnostic_type::error, tbuf_group);
                     }
-                }
-                else {
+                } else {
                     log_diagnostic("no target file size set.", last_diagnostic_type::error, tbuf_group);
                 }
-            }
-            else {
+            } else {
                 log_diagnostic("no input file specified.", last_diagnostic_type::error, tbuf_group);
             }
-        }
-        else {
+        } else {
             log_diagnostic("wait for running process to finish.", last_diagnostic_type::error, tbuf_group);
         }
     }
@@ -584,18 +568,15 @@ argument_options_count_audio_tracks(text_buffer_group *tbuf_group,
                             AUDIO_TRACK_COUNT_BUFSIZE);
 
                     log_diagnostic("[info]: ffprobe exited.", last_diagnostic_type::info, tbuf_group);
-                }
-                else {
+                } else {
                     tbuf_group->ffprobe_buffer[0] = 0x0;
 
                     log_diagnostic("failed to retrieve audio track count.", last_diagnostic_type::error, tbuf_group);
                 }
-            }
-            else {
+            } else {
                 log_diagnostic("no input file specified.", last_diagnostic_type::error, tbuf_group);
             }
-        }
-        else {
+        } else {
             log_diagnostic("wait for running process to finish.", last_diagnostic_type::error, tbuf_group);
         }
     }
@@ -680,8 +661,8 @@ add_args_to_presets(text_buffer_group *tbuf_group,
                 int preset_name_len = strlen(preset_name_buffer);
 
                 serialize_preset(preset_name_buffer, 
-                        tbuf_group->user_cmd_buffer,
-                        tbuf_group);
+                                tbuf_group->user_cmd_buffer,
+                                tbuf_group);
                 insert_preset_name(p_table, preset_name_buffer,
                                     preset_name_len, p_table->entry_amount);
 
@@ -689,16 +670,13 @@ add_args_to_presets(text_buffer_group *tbuf_group,
                 ++p_table->entry_amount;
 
                 log_diagnostic("[info]: preset saved.", last_diagnostic_type::info, tbuf_group);
-            }
-            else {
+            } else {
                 log_diagnostic("preset name already exists.", last_diagnostic_type::error, tbuf_group);
             }
-        } 
-        else {
+        } else {
             log_diagnostic("preset must have a name.", last_diagnostic_type::error, tbuf_group);
         }
-    } 
-    else {
+    } else {
         log_diagnostic("maximum preset amount exceeded (lmao how).", last_diagnostic_type::error, tbuf_group);
     }
 }
@@ -752,8 +730,7 @@ menu_start_ffmpeg(text_buffer_group *tbuf_group,
                 printf("%s\n", tbuf_group->command_buffer);
     #endif
 #endif
-            }
-            else {
+            } else {
 #if _2PACMPEG_WIN32
                 snprintf(tbuf_group->command_buffer,
                         PMEM_COMMANDBUFFERSIZE,
@@ -776,14 +753,12 @@ menu_start_ffmpeg(text_buffer_group *tbuf_group,
             platform_ffmpeg_execute_command(tbuf_group,
                                             thread_info,
                                             rt_vars);
-        }
-        else {
+        } else {
             log_diagnostic("no input file specified.",
                                 last_diagnostic_type::error,
                                 tbuf_group);
         }
-    }
-    else {
+    } else {
         log_diagnostic("FFmpeg is already running.",
                             last_diagnostic_type::error,
                             tbuf_group);
@@ -888,14 +863,12 @@ basic_controls_update(text_buffer_group *tbuf_group,
                         "%s\\%s\0",
                         tbuf_group->default_path_buffer, 
                         tbuf_group->temp_buffer);
-            } 
-            else {
+            } else {
                 strncpy(tbuf_group->output_path_buffer,
                         tbuf_group->default_path_buffer,
                         PMEM_OUTPUTPATHBUFFERSIZE);
             }
-        } 
-        else {
+        } else {
             log_diagnostic("default output directory not set",
                                 last_diagnostic_type::error,
                                 tbuf_group);
@@ -914,8 +887,7 @@ basic_controls_update(text_buffer_group *tbuf_group,
             tbuf_group->diagnostic_buffer[0] = 0x0;
 
             save_default_output_path(tbuf_group, p_table);
-        }
-        else {
+        } else {
             log_diagnostic("no directory entered.", 
                         last_diagnostic_type::error,
                         tbuf_group);
@@ -977,12 +949,10 @@ basic_controls_update(text_buffer_group *tbuf_group,
                 of what it says.** 
 */
                 log_diagnostic("[info]: FFmpeg killed.", last_diagnostic_type::info, tbuf_group);
-            }
-            else {
+            } else {
                 log_diagnostic("[bug]: FFmpeg could not be killed for an unknown reason.", last_diagnostic_type::error, tbuf_group);
             }
-        }
-        else {
+        } else {
             log_diagnostic("FFmpeg is not running.", last_diagnostic_type::error, tbuf_group);
         }
     }
