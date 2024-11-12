@@ -132,8 +132,7 @@ platform_thread_wait_for_exit(void *thread_args_voidptr)
                                                         platform_thread_read_stdout,
                                                         thread_args_voidptr, 0, 0);
 #if _2PACMPEG_DEBUG
-    if(thread_args->_thread_info->stdio_thread_handle == 
-            INVALID_HANDLE_VALUE) {
+    if(thread_args->_thread_info->stdio_thread_handle == INVALID_HANDLE_VALUE) {
         OutputDebugStringA("[error]: thread received invalid handle.\n");
     }
 #endif
@@ -354,6 +353,24 @@ platform_write_file(s8 *file_path,
     return result;
 }
 
+INTERNAL void
+check_ffmpeg_existence(text_buffer_group *tbuf_group)
+{
+    char ffmpeg_path[PMEM_WORKINGDIRSIZE];
+    snprintf(ffmpeg_path, PMEM_WORKINGDIRSIZE, "%s\\ffmpeg\\ffmpeg.exe", tbuf_group->working_directory);
+    
+    if(!platform_file_exists(ffmpeg_path)) {
+        log_diagnostic("[warning]: ffmpeg doesn't seem to be discoverable to 2PACMPEG.",
+                    last_diagnostic_type::error, tbuf_group);
+    } else {
+        snprintf(ffmpeg_path, PMEM_WORKINGDIRSIZE, "%s\\ffmpeg\\ffprobe.exe", tbuf_group->working_directory);
+        if(!platform_file_exists(ffmpeg_path)) {
+            log_diagnostic("[warning]: some features may not work because ffprobe.exe seems to be missing.",
+                        last_diagnostic_type::error, tbuf_group);
+        }
+    }
+}
+
 int __stdcall 
 WinMain(HINSTANCE instance, HINSTANCE, 
         char *cmd_args, int) 
@@ -481,6 +498,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
     OutputDebugStringA(tbuf_group.temp_buffer);
     memset(tbuf_group.temp_buffer, 0, strlen(tbuf_group.temp_buffer));
 #endif
+
+    check_ffmpeg_existence(&tbuf_group);
 
     while(!glfwWindowShouldClose(rt_vars.win_ptr)) {
         update_window(&tbuf_group, &p_table, 

@@ -1,6 +1,7 @@
 
 /*
 FIXME: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
+TODO: warnings for if ffmpeg or ffprobe isn't found on the system
 */
 
 #include "thangz.h"
@@ -21,15 +22,12 @@ heapbuf_alloc_region(program_memory *pool, u64 region_size)
 }
 
 INTERNAL void
-glfw_drop_callback(GLFWwindow *win_ptr, 
-                    int path_count, 
-                    char **path_list)
+glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list)
 {
-    LOCAL_STATIC text_buffer_group *tbuf_group = 
-            get_text_buffer_group_ptr(0);
+    LOCAL_STATIC text_buffer_group *tbuf_group = get_text_buffer_group_ptr(0);
 
     if(tbuf_group) {
-        strncpy(tbuf_group->input_path_buffer,
+        strncpy(tbuf_group->input_path_buffer, 
                 path_list[0],
                 PMEM_INPUTPATHBUFFERSIZE);
     }
@@ -52,9 +50,7 @@ get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group)
 }
 
 INTERNAL last_diagnostic_type 
-log_diagnostic(s8 *message, 
-            last_diagnostic_type type, 
-            text_buffer_group *tbuf_group) 
+log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group) 
 {
     LOCAL_STATIC last_diagnostic_type last_diagnostic = undefined;
     
@@ -229,6 +225,8 @@ save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table)
                     "%c%s\n%s\0",
                     TOKEN_OUTPUTDIR, tbuf_group->default_path_buffer,
                     tbuf_group->temp_buffer);
+
+            adjust_pointer_table(p_table, tbuf_group);
         } else {
             strncpy(tbuf_group->temp_buffer, tbuf_group->config_buffer,
                     PMEM_TEMPBUFFERSIZE);
