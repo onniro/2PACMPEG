@@ -48,7 +48,8 @@ platform_init_threading(platform_thread_info *thread_info)
 
     if(CreatePipe(&thread_info->read_handle, 
                 &thread_info->write_handle,
-                &thread_info->cmd_stream_attribs, 0)) {
+                &thread_info->cmd_stream_attribs, 0)) 
+    {
         thread_info->cmd_stream_startupinfo.cb = sizeof(STARTUPINFO);
         thread_info->cmd_stream_startupinfo.dwFlags = STARTF_USESTDHANDLES;
         thread_info->cmd_stream_startupinfo.hStdInput = INVALID_HANDLE_VALUE;
@@ -56,9 +57,8 @@ platform_init_threading(platform_thread_info *thread_info)
         thread_info->cmd_stream_startupinfo.hStdError = thread_info->write_handle;
     }
 #if _2PACMPEG_DEBUG
-    else {
-        OutputDebugStringA("[error]: CreatePipe failed.\n");
-    }
+    else 
+    { OutputDebugStringA("[error]: CreatePipe failed.\n"); }
 #endif
 }
 
@@ -68,18 +68,23 @@ platform_thread_read_stdout(void *thread_args_voidptr)
     win32_thread_args *thread_args = (win32_thread_args *)thread_args_voidptr;
 
     //bit verbose but aight
-    switch(*thread_args->_prog_enum) {
-    case ffmpeg: {
+    switch(*thread_args->_prog_enum) 
+    {
+    case ffmpeg: 
+    {
         u64 stdout_buffer_bytes = 0;
 
-        while(1) {
+        while(1) 
+        {
             DWORD line_buffer_size;
             if(ReadFile(thread_args->_thread_info->read_handle,
                     thread_args->_tbuf_group->stdout_line_buffer,
-                    PMEM_STDOUTLINEBUFFERSIZE - 1, &line_buffer_size, 0)) {
+                    PMEM_STDOUTLINEBUFFERSIZE - 1, &line_buffer_size, 0)) 
+            {
                 stdout_buffer_bytes += line_buffer_size;
 
-                if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
+                if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) 
+                {
                     thread_args->_tbuf_group->stdout_buffer[0] = 0x0;
                     stdout_buffer_bytes = 0;
                 }
@@ -87,34 +92,39 @@ platform_thread_read_stdout(void *thread_args_voidptr)
                 strncat(thread_args->_tbuf_group->stdout_buffer,
                         thread_args->_tbuf_group->stdout_line_buffer, 
                         PMEM_STDOUTBUFFERSIZE - stdout_buffer_bytes - 1);
-            } else {
-                break;
-            }
+            } 
+            else 
+            { break; }
         }
     } break;
 
-    case ffprobe: {
+    case ffprobe: 
+    {
         char temp_buffer[PMEM_DIAGNOSTICBUFFERSIZE];
 
-        while(1) {
+        while(1) 
+        {
             DWORD line_buffer_size;
             if(ReadFile(thread_args->_thread_info->read_handle,
                     temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE, 
-                    &line_buffer_size, 0)) {
+                    &line_buffer_size, 0)) 
+            {
                 temp_buffer[line_buffer_size] = 0x0;
 
                 strncat(thread_args->_tbuf_group->ffprobe_buffer,
                         temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE);
-            } else {
-                break;
-            }
+            } 
+            else 
+            { break; }
         }
     } break;
 
-    case ffplay: {
+    case ffplay: 
+    {
     } break;
 
-    case other: {
+    case other: 
+    {
     } break;
 
     default: break;
@@ -132,35 +142,37 @@ platform_thread_wait_for_exit(void *thread_args_voidptr)
                                                         platform_thread_read_stdout,
                                                         thread_args_voidptr, 0, 0);
 #if _2PACMPEG_DEBUG
-    if(thread_args->_thread_info->stdio_thread_handle == INVALID_HANDLE_VALUE) {
-        OutputDebugStringA("[error]: thread received invalid handle.\n");
-    }
+    if(thread_args->_thread_info->stdio_thread_handle == INVALID_HANDLE_VALUE) 
+    { OutputDebugStringA("[error]: thread received invalid handle.\n"); }
 #endif
 
     if(CreateProcessA(0, thread_args->_tbuf_group->command_buffer,
             0, 0, TRUE, CREATE_NO_WINDOW, 0, 0, 
             &thread_args->_thread_info->cmd_stream_startupinfo,
-            &thread_args->_thread_info->cmd_stream_processinfo)) {
+            &thread_args->_thread_info->cmd_stream_processinfo)) 
+    {
         thread_args->_rt_vars->ffmpeg_is_running = true;
 
-        if(*thread_args->_prog_enum == ffmpeg) {
+        if(*thread_args->_prog_enum == ffmpeg) 
+        {
             log_diagnostic("[info]: FFmpeg started...",
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
         }
 
-        WaitForSingleObject(
-                thread_args->_thread_info->cmd_stream_processinfo.hProcess, 
-                INFINITE);
+        WaitForSingleObject(thread_args->_thread_info->cmd_stream_processinfo.hProcess, INFINITE);
 
         thread_args->_rt_vars->ffmpeg_is_running = false;
 
-        if(*thread_args->_prog_enum == ffmpeg) {
+        if(*thread_args->_prog_enum == ffmpeg) 
+        {
             log_diagnostic("[info]: FFmpeg exited.",
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
         }
-    } else {
+    } 
+    else 
+    {
         log_diagnostic("[fatal error]: process failed to start.",
                         last_diagnostic_type::error,
                         thread_args->_tbuf_group);
@@ -180,10 +192,8 @@ INTERNAL bool32
 platform_kill_process(platform_thread_info *thread_info) 
 {
     bool32 result = false;
-    if(TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, 
-            PROCESS_TERMINATE)) {
-        result = true;
-    }
+    if(TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, PROCESS_TERMINATE)) 
+    { result = true; }
 
     return result;
 }
@@ -220,21 +230,25 @@ platform_file_input_dialog(wchar_t *output_buffer)
 {
     HRESULT result = CoInitializeEx(0, COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
 
-    if(SUCCEEDED(result)) {
+    if(SUCCEEDED(result)) 
+    {
         IFileOpenDialog *file_dialog;
         result = CoCreateInstance(CLSID_FileOpenDialog, 0, CLSCTX_ALL,
                                 IID_IFileOpenDialog, 
                                 (void **)&file_dialog);
 
-        if(SUCCEEDED(result) && SUCCEEDED(result = file_dialog->Show(0))) {
+        if(SUCCEEDED(result) && SUCCEEDED(result = file_dialog->Show(0))) 
+        {
             IShellItem *shell_item;
             result = file_dialog->GetResult(&shell_item);
 
-            if(SUCCEEDED(result)) {
+            if(SUCCEEDED(result)) 
+            {
                 PWSTR file_path;
                 result = shell_item->GetDisplayName(SIGDN_FILESYSPATH,
                                                     &file_path);
-                if(SUCCEEDED(result)) {
+                if(SUCCEEDED(result)) 
+                {
                     wcscpy(output_buffer, file_path);
                     CoTaskMemFree(file_path);
                 }
@@ -255,13 +269,13 @@ platform_get_working_directory(s8 *destination, DWORD buffer_size)
     s8 *result = 0;
     DWORD path_length = GetModuleFileNameA(0, destination, buffer_size);
 
-    if(path_length) {
+    if(path_length) 
+    {
         result = destination;
         for(DWORD char_index = path_length - 1;
                 destination[char_index] != '\\';
-                --char_index) {
-            destination[char_index] = '\0';
-        }
+                --char_index) 
+        { destination[char_index] = '\0'; }
     }
 
     return result;
@@ -271,9 +285,8 @@ inline bool32
 platform_file_exists(s8 *file_path) 
 {
     bool32 result = false;
-    if(PathFileExistsA(file_path)) {
-        result = true;
-    }
+    if(PathFileExistsA(file_path)) 
+    { result = true; }
 
     return result;
 }
@@ -282,9 +295,8 @@ inline bool32
 platform_directory_exists(s8 *directory_name) 
 {
     bool32 result = false;
-    if(PathIsDirectoryA(directory_name)) {
-        result = true;
-    }
+    if(PathIsDirectoryA(directory_name)) 
+    { result = true; }
 
     return result;
 }
@@ -299,20 +311,21 @@ platform_read_file(s8 *file_path,
                                    FILE_SHARE_READ, 0, OPEN_EXISTING,
                                    0, 0);
 
-    if(file_handle != INVALID_HANDLE_VALUE) {
+    if(file_handle != INVALID_HANDLE_VALUE) 
+    {
         LARGE_INTEGER file_size;
-        if(GetFileSizeEx(file_handle, &file_size)) {
+        if(GetFileSizeEx(file_handle, &file_size)) 
+        {
             *dest_size = file_size.QuadPart;
             DWORD bytes_read;
 
-            if(ReadFile(file_handle, destination, *dest_size, 
-                                    &bytes_read, 0)) {
-                result = true;
-            }
+            if(ReadFile(file_handle, destination, *dest_size, &bytes_read, 0)) 
+            { result = true; }
         } 
     } 
 #if _2PACMPEG_DEBUG
-    else {
+    else 
+    {
         char _diagnostic[128];
         snprintf(_diagnostic, 128,
                 "[file read error]: could not read file. error code: %i", 
@@ -334,15 +347,15 @@ platform_write_file(s8 *file_path,
     HANDLE file_handle = CreateFileA(file_path, GENERIC_WRITE,
                                     FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
 
-    if(file_handle != INVALID_HANDLE_VALUE) {
+    if(file_handle != INVALID_HANDLE_VALUE) 
+    {
         DWORD bytes_written;
-        if(WriteFile(file_handle, in_buffer, buffer_size, 
-                                  &bytes_written, 0)) {
-            result = true;
-        }
+        if(WriteFile(file_handle, in_buffer, buffer_size, &bytes_written, 0)) 
+        { result = true; }
     }
 #if defined(_2PACMPEG_DEBUG)
-    else {
+    else 
+    {
         char err_buf[128];
         sprintf(err_buf, "[error]: writing file failed with code %d.\n", GetLastError());
         OutputDebugStringA(err_buf);
@@ -359,12 +372,16 @@ check_ffmpeg_existence(text_buffer_group *tbuf_group)
     char ffmpeg_path[PMEM_WORKINGDIRSIZE];
     snprintf(ffmpeg_path, PMEM_WORKINGDIRSIZE, "%s\\ffmpeg\\ffmpeg.exe", tbuf_group->working_directory);
     
-    if(!platform_file_exists(ffmpeg_path)) {
+    if(!platform_file_exists(ffmpeg_path)) 
+    {
         log_diagnostic("[warning]: ffmpeg doesn't seem to be discoverable to 2PACMPEG.",
                     last_diagnostic_type::error, tbuf_group);
-    } else {
+    } 
+    else 
+    {
         snprintf(ffmpeg_path, PMEM_WORKINGDIRSIZE, "%s\\ffmpeg\\ffprobe.exe", tbuf_group->working_directory);
-        if(!platform_file_exists(ffmpeg_path)) {
+        if(!platform_file_exists(ffmpeg_path)) 
+        {
             log_diagnostic("[warning]: some features may not work because ffprobe.exe seems to be missing.",
                         last_diagnostic_type::error, tbuf_group);
         }
@@ -376,13 +393,15 @@ WinMain(HINSTANCE instance, HINSTANCE,
         char *cmd_args, int) 
 {
 #define SCHEDULER_MS_RESOLUTION 1
-    if(timeBeginPeriod(SCHEDULER_MS_RESOLUTION) == TIMERR_NOERROR) {
+    if(timeBeginPeriod(SCHEDULER_MS_RESOLUTION) == TIMERR_NOERROR) 
+    {
 #if _2PACMPEG_DEBUG
         OutputDebugStringA("[info]: set Windows scheduler granularity to 1 millisecond.\n");
 #endif
     }
 
-    if(!glfwInit()) {
+    if(!glfwInit()) 
+    {
         OutputDebugStringA("glfwInit() failed.\n");
         return -1;
     }
@@ -401,7 +420,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
             "2PACMPEG v2.3 - 2PAC 4 LYFE (Definitive Edition) (debug)", 
 #endif
             0, 0);
-    if(!rt_vars.win_ptr) {
+    if(!rt_vars.win_ptr) 
+    {
         OutputDebugStringA("null pointer to GLFW window\n");
         return -1;
     }
@@ -423,9 +443,11 @@ WinMain(HINSTANCE instance, HINSTANCE,
     ImGui_ImplGlfw_InitForOpenGL(rt_vars.win_ptr, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    if(!strstr(cmd_args, "--use-bitmap-font")) {
+    if(!strstr(cmd_args, "--use-bitmap-font")) 
+    {
         //TODO resolve font path dynamically since this might cause problems
-        if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) {
+        if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) 
+        {
             rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\lucon.ttf",
                                         13.0f, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
         }
@@ -434,9 +456,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
     program_memory p_memory = {0};
     platform_make_heap_buffer(&p_memory, PMEMORY_AMT);
 
-    if(!p_memory.memory) {
-        return -1;
-    }
+    if(!p_memory.memory)
+    { return -1; }
 
     text_buffer_group tbuf_group = {0};
     tbuf_group.input_path_buffer =      (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
@@ -451,9 +472,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
     tbuf_group.wchar_input_buffer =     (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
 
     // ?? ok
-    if(tbuf_group.default_path_buffer) {
-        tbuf_group.default_path_buffer[0] = 0x0;
-    }
+    if(tbuf_group.default_path_buffer) 
+    { tbuf_group.default_path_buffer[0] = 0x0; }
 
     s8 _diagnostic_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
     s8 _ffprobe_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
@@ -463,7 +483,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
     tbuf_group.working_directory =  (s8 *)heapbuf_alloc_region(&p_memory, PMEM_WORKINGDIRSIZE);
     platform_get_working_directory(tbuf_group.working_directory, 1024);
 
-    if(tbuf_group.working_directory) {
+    if(tbuf_group.working_directory) 
+    {
         //maybe should get rid of this as well?
         tbuf_group.config_path = (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGPATHSIZE);
 
@@ -501,7 +522,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
 
     check_ffmpeg_existence(&tbuf_group);
 
-    while(!glfwWindowShouldClose(rt_vars.win_ptr)) {
+    while(!glfwWindowShouldClose(rt_vars.win_ptr)) 
+    {
         update_window(&tbuf_group, &p_table, 
                         &rt_vars, &thread_info);
         // HYPERBRUH
@@ -515,9 +537,8 @@ WinMain(HINSTANCE instance, HINSTANCE,
     glfwDestroyWindow(rt_vars.win_ptr);
     glfwTerminate();
 
-    if(rt_vars.ffmpeg_is_running) {
-        TerminateProcess(thread_info.cmd_stream_processinfo.hProcess, PROCESS_TERMINATE);
-    }
+    if(rt_vars.ffmpeg_is_running) 
+    { TerminateProcess(thread_info.cmd_stream_processinfo.hProcess, PROCESS_TERMINATE); }
 
     return EXIT_SUCCESS;
 }

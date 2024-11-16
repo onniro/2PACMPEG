@@ -78,8 +78,10 @@ inline u32
 string_length(s8 *string) 
 {
     u32 count = 0;
-    if(string) {
-        while(*string++) {++count;}
+    if(string) 
+    { 
+        while(*string++) 
+        { ++count; } 
     }
 
     return count;
@@ -96,9 +98,8 @@ string_copy(s8 *destination, s8 *source)
 inline s8 *
 string_n_copy(s8 *destination, s8 *source, u32 char_amount) 
 {
-    for(u32 index = 0; index < char_amount; ++index) {
-        *destination++ = *source++;
-    }
+    for(u32 index = 0; index < char_amount; ++index) 
+    { *destination++ = *source++; }
 
     return destination;
 }
@@ -106,7 +107,8 @@ string_n_copy(s8 *destination, s8 *source, u32 char_amount)
 inline void *
 mem_copy(void *destination, void *source, u64 bytes) 
 {
-    while(bytes) {
+    while(bytes) 
+    {
         *destination = *(u8 *)source += 1;
         --bytes;
     }
@@ -118,7 +120,8 @@ inline void *
 mem_set_value(void *destination, u8 value, u64 bytes) 
 {
     u8 *temp = (u8 *)destination;
-    while(bytes) {
+    while(bytes) 
+    {
         *temp++ = value;
         --bytes;
     }                   
@@ -149,28 +152,34 @@ posixapi_get_timestamp(void)
     return result;
 }
 
-THANGZ_INTERNAL bool32 
+//idk why this is here
+static bool32 
 posixapi_get_stdout(char *command, int *output_fd, 
                     pid_t *proc_id, bool32 include_stderr) 
 {
     bool32 result = false;
 
     int pipe_fd[2];
-    if(-1 == pipe(pipe_fd)) {
+    if(-1 == pipe(pipe_fd)) 
+    {
         perror("pipe");
         _exit(1);
     }
 
     *proc_id = fork();
-    if(-1 == *proc_id) {
+    if(-1 == *proc_id) 
+    {
         perror("fork");
         _exit(1);
-    } else if(0 == *proc_id) {
+    } 
+    else if(0 == *proc_id) 
+    {
         close(pipe_fd[STDIN_FILENO]);
         dup2(pipe_fd[STDOUT_FILENO], STDOUT_FILENO);
-        if(include_stderr) {
-            dup2(STDOUT_FILENO, STDERR_FILENO);
-        }
+
+        if(include_stderr) 
+        { dup2(STDOUT_FILENO, STDERR_FILENO); }
+
         close(pipe_fd[STDOUT_FILENO]);
 
         char _temp[1024*8];
@@ -180,7 +189,9 @@ posixapi_get_stdout(char *command, int *output_fd,
         perror("execl");
 
         _exit(1);
-    } else {
+    } 
+    else 
+    {
         close(pipe_fd[STDOUT_FILENO]);
         *output_fd = pipe_fd[STDIN_FILENO];
 
