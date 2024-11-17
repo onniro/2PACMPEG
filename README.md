@@ -9,22 +9,18 @@ _pac was tha meanin of lyfe..._
 
 # 1. installation
 ## 1.1. Windows
-### 1.1.1. WITH\_FFMPEG
-- step 1: download the archive where it says "2PACMPEG\_WINDOWS\_x64\_WITH\_FFMPEG" from  <https://github.com/onniro/2PACMPEG/releases>
-- step 2: extract the archive wherever you want
+- step 1: obtain copies of ffmpeg.exe and ffprobe.exe (<https://www.ffmpeg.org/download.html>)
+- step 2: download the archive where it says something like 2PACMPEG_WINDOWS_x64 from <https://github.com/onniro/2PACMPEG/releases>
+- step 3: unpack the archive somewhere
+- step 4: go to the containing folder of 2PACMPEG.EXE
+- step 5: make a folder there with the name ffmpeg
+- step 6: put ffmpeg.exe and ffprobe.exe into the aforementioned folder
 
-### 1.1.2 NO\_FFMPEG
-- step 1: obtain copies of the FFmpeg executables (mainly ffmpeg.exe and ffprobe.exe)
-- step 2: follow the instructions in section 1.1.1, but instead of downloading 2PACMPEG\_WINDOWS\_x64\_WITH\_FFMPEG, download 2PACMPEG\_WINDOWS\_x64\_NO\_FFMPEG instead
-- step 3: go to the containing folder of the 2PACMPEG executable
-- step 4: make a folder there with the name ffmpeg
-- step 5: copy (or move) the ffmpeg and ffprobe executables into that folder 
-
-## 1.2. Linux
-- step 1: download respective archive for linux from link in section 1.1.1
-- step 2: extract it
-- step 3: get ffmpeg and ffprobe from your package manager
-- step 4: pray that it works
+## 1.2. Linux (GNU libc & X11)
+- step 1: get ffmpeg and ffprobe from your package manager
+- step 2: download the archive where it says something like 2PACMPEG_LINUX_X11_x64 from link in section 1.1.
+- step 3: unpack and see if it works
+- (see section 3 if it doesn't lol)
 
 ## 2. usage:
 - go to the folder where you unpacked the archive and click on the thing where it says 2PACMPEG
@@ -47,13 +43,13 @@ _pac was tha meanin of lyfe..._
 - GLFW3 (included)
 
 ## 3.3. actually building
-- add clang++ to %PATH%/$PATH
-- on Windows: cd C:\path\to\2pacmpeg && release.bat
-- on Linux: cd /path/to/2pacmpeg && sh release.sh
+- append containing folder of clang++ to PATH shell environment variable
+- on windows, run clang_release.bat in its containing folder and clang_release.sh on linux
 - (for debug, run compile_imgui.bat/sh **once** and then build with build.bat/sh)
 
 # 4. credits 
 - thanks to mastermind graphix designer Karkagami for the icon(s) <3
 - GLFW3 - window creation and rendering backend for ImGui
 - ImGui - gui toolkit
+- (most importantly) FFmpeg 
 

@@ -524,8 +524,7 @@ WinMain(HINSTANCE instance, HINSTANCE,
 
     while(!glfwWindowShouldClose(rt_vars.win_ptr)) 
     {
-        update_window(&tbuf_group, &p_table, 
-                        &rt_vars, &thread_info);
+        update_window(&tbuf_group, &p_table, &rt_vars, &thread_info);
         // HYPERBRUH
         Sleep(16);
     }

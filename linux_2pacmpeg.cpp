@@ -49,7 +49,6 @@ INTERNAL void
 platform_init_threading(platform_thread_info *thread_info) 
 {
     //NOTE: no need to implement this on linux
-
     return;
 }
 
