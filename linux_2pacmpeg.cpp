@@ -35,10 +35,8 @@
 INTERNAL void * 
 platform_make_heap_buffer(program_memory *target, u64 pool_size) 
 {
-    target->memory = mmap(0, pool_size, 
-                        PROT_READ|PROT_WRITE, 
-                        MAP_PRIVATE|MAP_ANONYMOUS,
-                        0, 0);
+    target->memory = mmap(0, pool_size, PROT_READ|PROT_WRITE, 
+                        MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
     target->write_ptr = target->memory;
     target->capacity = pool_size;
 

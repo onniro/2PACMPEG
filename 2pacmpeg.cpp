@@ -1069,9 +1069,7 @@ preset_list_update(text_buffer_group *tbuf_group,
         {
             // TODO: change the names
             if(ImGui::Button("remove")) 
-            {
-                remove_preset(p_table, tbuf_group, preset_index);
-            }
+            { remove_preset(p_table, tbuf_group, preset_index); }
 
             ImGui::EndPopup();
         }

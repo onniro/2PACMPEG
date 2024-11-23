@@ -16,11 +16,9 @@ _pac was tha meanin of lyfe..._
 - step 5: make a folder there with the name ffmpeg
 - step 6: put ffmpeg.exe and ffprobe.exe into the aforementioned folder
 
-## 1.2. Linux (GNU libc & X11)
+## 1.2. Linux
 - step 1: get ffmpeg and ffprobe from your package manager
-- step 2: download the archive where it says something like 2PACMPEG_LINUX_X11_x64 from link in section 1.1.
-- step 3: unpack and see if it works
-- (see section 3 if it doesn't lol)
+- step 2: see section 3 lol
 
 ## 2. usage:
 - go to the folder where you unpacked the archive and click on the thing where it says 2PACMPEG
@@ -43,7 +41,7 @@ _pac was tha meanin of lyfe..._
 - GLFW3 (included)
 
 ## 3.3. actually building
-- append containing folder of clang++ to PATH shell environment variable
+- append containing folder of clang++ to PATH shell environment variable if it's not already there
 - on windows, run clang_release.bat in its containing folder and clang_release.sh on linux
 - (for debug, run compile_imgui.bat/sh **once** and then build with build.bat/sh)
 
