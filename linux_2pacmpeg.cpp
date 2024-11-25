@@ -331,8 +331,7 @@ main(int arg_count, char **args)
 
     glfwMakeContextCurrent(rt_vars.win_ptr);
     glfwSwapInterval(0); // NOTE: it seems like this call was being ignored before
-    glfwSetDropCallback(rt_vars.win_ptr, 
-                        (GLFWdropfun)glfw_drop_callback);
+    glfwSetDropCallback(rt_vars.win_ptr, (GLFWdropfun)glfw_drop_callback);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();

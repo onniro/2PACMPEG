@@ -1138,8 +1138,6 @@ update_window(text_buffer_group *tbuf_group, preset_table *p_table,
     ImGui::Render();
     glfwGetFramebufferSize(rt_vars->win_ptr, &rt_vars->win_width, 
                                             &rt_vars->win_height);
-    glClearColor(0, 0, 0, 0xff);
-    glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     glfwSwapBuffers(rt_vars->win_ptr);
