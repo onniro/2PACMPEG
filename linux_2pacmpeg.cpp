@@ -32,9 +32,7 @@
 
 #include "2pacmpeg.cpp"
     
-INTERNAL void * 
-platform_make_heap_buffer(program_memory *target, u64 pool_size) 
-{
+INTERNAL void *platform_make_heap_buffer(program_memory *target, u64 pool_size) {
     target->memory = mmap(0, pool_size, PROT_READ|PROT_WRITE, 
                         MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
     target->write_ptr = target->memory;
@@ -43,22 +41,17 @@ platform_make_heap_buffer(program_memory *target, u64 pool_size)
     return target->memory;
 }
 
-INTERNAL void 
-platform_init_threading(platform_thread_info *thread_info) 
-{
+INTERNAL void platform_init_threading(platform_thread_info *thread_info) {
     //NOTE: no need to implement this on linux
     return;
 }
 
-extern void *
-platform_thread_read_proc_stdout(void *args_voidptr) 
-{
+extern void *platform_thread_read_proc_stdout(void *args_voidptr) {
     linux_thread_args *thread_args = (linux_thread_args *)args_voidptr;
 
     if(!posixapi_get_stdout(thread_args->_tbuf_group->command_buffer,
             &thread_args->_thread_info->file_descriptor,
-            &thread_args->_thread_info->proc_id, true)) 
-    {
+            &thread_args->_thread_info->proc_id, true)) {
         log_diagnostic("[fatal error]: process failed to start.",
                         last_diagnostic_type::error,
                         thread_args->_tbuf_group);
@@ -72,29 +65,26 @@ platform_thread_read_proc_stdout(void *args_voidptr)
     char *full_buffer = thread_args->_tbuf_group->stdout_buffer;
     char *ffprobe_buffer = thread_args->_tbuf_group->ffprobe_buffer;
 
-    switch(*thread_args->_prog_enum) 
-    {
-    case ffmpeg: 
-    {
+    switch(*thread_args->_prog_enum) {
+    case ffmpeg: {
         log_diagnostic("[info]: FFmpeg started...",
                         last_diagnostic_type::info,
                         thread_args->_tbuf_group);
         ssize_t bytes_read = 0;
         u64 stdout_buffer_bytes = 0;
 
-        while(1) 
-        {
+        while(1) {
             bytes_read = read(thread_args->_thread_info->file_descriptor,
                             line_buffer,
                             PMEM_STDOUTLINEBUFFERSIZE - 1);
-            if(!bytes_read) 
-            { break; }
+            if(!bytes_read) { 
+                break; 
+            }
 
             //this causes behavior that makes me question my understanding of read()
             //line_buffer[bytes_read] = 0x0;
             stdout_buffer_bytes += bytes_read;
-            if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) 
-            {
+            if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
                 full_buffer[0] = 0x0;
                 stdout_buffer_bytes = 0;
             }
@@ -106,13 +96,11 @@ platform_thread_read_proc_stdout(void *args_voidptr)
         log_diagnostic("[info]: FFmpeg exited.", last_diagnostic_type::info, thread_args->_tbuf_group);
     } break;
 
-    case ffprobe: 
-    {
+    case ffprobe: {
         char temp_buffer[PMEM_DIAGNOSTICBUFFERSIZE];
         ssize_t bytes_read = 0;
 
-        while(1) 
-        {
+        while(1) {
             bytes_read = read(thread_args->_thread_info->file_descriptor,
                             line_buffer,
                             PMEM_STDOUTLINEBUFFERSIZE);
@@ -122,12 +110,10 @@ platform_thread_read_proc_stdout(void *args_voidptr)
         }
     } break;
 
-    case ffplay: 
-    {
+    case ffplay: {
     } break;
 
-    case other: 
-    {
+    case other: {
     } break;
 
     default: break;
@@ -135,34 +121,32 @@ platform_thread_read_proc_stdout(void *args_voidptr)
 
     waitpid(thread_args->_thread_info->proc_id, 0, 0);
 
-    if(fcntl(thread_args->_thread_info->file_descriptor, F_GETFD) != -1) 
-    { close(thread_args->_thread_info->file_descriptor); }
+    if(fcntl(thread_args->_thread_info->file_descriptor, F_GETFD) != -1) { 
+        close(thread_args->_thread_info->file_descriptor); 
+    }
 
     thread_args->_rt_vars->ffmpeg_is_running = false;
 
     pthread_exit(EXIT_SUCCESS);
 }
 
-INTERNAL bool32 
-platform_kill_process(platform_thread_info *thread_info) 
-{
+INTERNAL bool32 platform_kill_process(platform_thread_info *thread_info) {
     bool32 result = false;
     //pid + 1 works lmao?
-    if(-1 != kill(thread_info->proc_id + 1, SIGKILL)) 
-    { result = true; }
+    if(-1 != kill(thread_info->proc_id + 1, SIGKILL)) { 
+        result = true; 
+    } else {
 #if _2PACMPEG_DEBUG
-    else 
-    { printf("errno=%i:%s\n", errno, strerror(errno)); }
+        printf("errno=%i:%s\n", errno, strerror(errno)); 
 #endif
+    }
 
     return result;
 }
 
-INTERNAL void 
-platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
-                                platform_thread_info *thread_info,
-                                runtime_vars *rt_vars) 
-{
+INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
+                                            platform_thread_info *thread_info,
+                                            runtime_vars *rt_vars) {
 #if _2PACMPEG_DEBUG
     printf("[debug]: attempting to execute:\n%s\n", 
             tbuf_group->command_buffer);
@@ -176,8 +160,7 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
 
     if(pthread_create(&thread_info->read_thread_handle, 0, 
                         platform_thread_read_proc_stdout,
-                        (void *)&thread_args)) 
-    {
+                        (void *)&thread_args)) {
         log_diagnostic("[fatal error]: spawning thread failed.",
                         last_diagnostic_type::error, tbuf_group);
 #if _2PACMPEG_DEBUG
@@ -190,68 +173,57 @@ platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
     pthread_detach(thread_info->read_thread_handle);
 }
 
-INTERNAL wchar_t *
-platform_file_input_dialog(wchar_t *output_buffer) 
-{
+INTERNAL wchar_t *platform_file_input_dialog(wchar_t *output_buffer) {
     //NOTE: X11 doesn't have a standard way to do this unlike Windows
     //so this won't be implemented for a while
 
     return output_buffer;
 }
 
-INTERNAL char *
-platform_get_working_directory(char *destination, uint32_t buffer_size) 
-{
+INTERNAL char *platform_get_working_directory(char *destination, uint32_t buffer_size) {
     size_t bytes_read = readlink("/proc/self/exe", 
                                 destination, 
                                 buffer_size);
     destination[bytes_read] = 0x0;
 
-    for(int char_index = (int)bytes_read;
-            char_index >= 0;
-            --char_index) 
-    {
-        if(destination[char_index] != '/') 
-        { destination[char_index] = 0x0; } 
-        else 
-        { break; }
+    for(int char_index = (int)bytes_read; char_index >= 0; --char_index) {
+        if(destination[char_index] != '/') { 
+            destination[char_index] = 0x0; 
+        } else { 
+            break; 
+        }
     }
 
     return destination;
 }
 
-inline bool32 
-platform_file_exists(char *file_path) 
-{
+inline bool32 platform_file_exists(char *file_path) {
     bool32 result = false;
     struct stat stat_struct;
 
-    if(!stat(file_path, &stat_struct)) 
-    { result = true; }
+    if(!stat(file_path, &stat_struct)) { 
+        result = true; 
+    }
 
     return result;
 }
 
-inline bool32 
-platform_directory_exists(char *directory_name) 
-{
+inline bool32 platform_directory_exists(char *directory_name) {
     bool32 result = false;
     struct stat stat_struct;
 
-    if(!stat(directory_name, &stat_struct) && S_ISDIR(stat_struct.st_mode)) 
-    { result = true; }
+    if(!stat(directory_name, &stat_struct) && S_ISDIR(stat_struct.st_mode)) { 
+        result = true; 
+    }
 
     return result;
 }
 
-INTERNAL bool32 
-platform_read_file(char *file_path, char *destination, u64 *dest_size) 
-{
+INTERNAL bool32 platform_read_file(char *file_path, char *destination, u64 *dest_size) {
     bool32 result = false;
     int file_descriptor = open(file_path, O_RDONLY);
 
-    if(file_descriptor != -1) 
-    {
+    if(file_descriptor != -1) {
         struct stat stat_buf;
         fstat(file_descriptor, &stat_buf);
         *dest_size = read(file_descriptor, 
@@ -265,16 +237,13 @@ platform_read_file(char *file_path, char *destination, u64 *dest_size)
     return result;
 }
 
-INTERNAL bool32 
-platform_write_file(char *file_path, void *in_buffer, u64 buffer_size) 
-{
+INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer_size) {
     bool32 result = false;
     int file_descriptor = open(file_path, 
                         O_CREAT|O_WRONLY|O_TRUNC, 
                         S_IRUSR|S_IWUSR);
 
-    if(file_descriptor != -1) 
-    {
+    if(file_descriptor != -1) {
         s64 write_status = write(file_descriptor, in_buffer, buffer_size);  
         result = (write_status == buffer_size);
 
@@ -284,12 +253,9 @@ platform_write_file(char *file_path, void *in_buffer, u64 buffer_size)
     return result;
 }
 
-INTERNAL void
-platform_load_font(runtime_vars *rt_vars)
-{
+INTERNAL void platform_load_font(runtime_vars *rt_vars) {
     char _fontname_buffer[] = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-    if(platform_file_exists(_fontname_buffer)) 
-    {
+    if(platform_file_exists(_fontname_buffer)) {
         rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
                                     _fontname_buffer,
                                     15.0f, 0, 
@@ -297,11 +263,8 @@ platform_load_font(runtime_vars *rt_vars)
     }
 }
 
-int 
-main(int arg_count, char **args) 
-{
-    if(!glfwInit()) 
-    {
+extern int main(int arg_count, char **args) {
+    if(!glfwInit()) {
         fprintf(stderr, "glfwInit failed.\n");
         return -1;
     }
@@ -322,8 +285,7 @@ main(int arg_count, char **args)
 #endif
                                         0, 0);
 
-    if(!rt_vars.win_ptr) 
-    {
+    if(!rt_vars.win_ptr) {
         fprintf(stderr, "couldn't allocate GLFW window\n");
         return -1;
     }
@@ -346,15 +308,17 @@ main(int arg_count, char **args)
 
     //TODO: do something about thsi
 #if 1
-    if(!args[1] || strcmp(args[1], "--use-bitmap-font")) 
-    { platform_load_font(&rt_vars); }
+    if(!args[1] || strcmp(args[1], "--use-bitmap-font")) { 
+        platform_load_font(&rt_vars); 
+    }
 #endif
 
     program_memory p_memory = {0};
     platform_make_heap_buffer(&p_memory, PMEMORY_AMT);
 
-    if(!p_memory.memory) 
-    { return -1; }
+    if(!p_memory.memory) { 
+        return -1; 
+    }
 
     text_buffer_group tbuf_group = {0};
     tbuf_group.input_path_buffer =      (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
@@ -369,8 +333,9 @@ main(int arg_count, char **args)
     tbuf_group.stdout_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
 
     // ?? ok
-    if(tbuf_group.default_path_buffer) 
-    { tbuf_group.default_path_buffer[0] = 0x0; }
+    if(tbuf_group.default_path_buffer) { 
+        tbuf_group.default_path_buffer[0] = 0x0; 
+    }
 
     s8 _diagnostic_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
     s8 _ffprobe_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0}; 
@@ -380,8 +345,7 @@ main(int arg_count, char **args)
     tbuf_group.working_directory =  (s8 *)heapbuf_alloc_region(&p_memory, PMEM_WORKINGDIRSIZE);
     platform_get_working_directory(tbuf_group.working_directory, 1024);
 
-    if(tbuf_group.working_directory) 
-    {
+    if(tbuf_group.working_directory) {
         tbuf_group.config_path = (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGPATHSIZE);
 
         sprintf(tbuf_group.config_path, 
@@ -405,8 +369,7 @@ main(int arg_count, char **args)
             tbuf_group.config_path);
 #endif
 
-    while(!glfwWindowShouldClose(rt_vars.win_ptr)) 
-    {
+    while(!glfwWindowShouldClose(rt_vars.win_ptr)) {
         uint64_t start_timestamp = posixapi_get_timestamp();
 
         update_window(&tbuf_group, &p_table, &rt_vars, &thread_info);
@@ -414,8 +377,9 @@ main(int arg_count, char **args)
         uint64_t end_timestamp = posixapi_get_timestamp();
         uint64_t delta_time = end_timestamp - start_timestamp;
         
-        if(delta_time < MAX_FRAMETIME_MICROSECONDS) 
-        { usleep(MAX_FRAMETIME_MICROSECONDS - (useconds_t)delta_time); }
+        if(delta_time < MAX_FRAMETIME_MICROSECONDS) { 
+            usleep(MAX_FRAMETIME_MICROSECONDS - (useconds_t)delta_time); 
+        }
     }
 
     ImGui_ImplOpenGL3_Shutdown();
@@ -425,8 +389,9 @@ main(int arg_count, char **args)
     glfwDestroyWindow(rt_vars.win_ptr);
     glfwTerminate();
 
-    if(rt_vars.ffmpeg_is_running) 
-    { platform_kill_process(&thread_info); }
+    if(rt_vars.ffmpeg_is_running) { 
+        platform_kill_process(&thread_info); 
+    }
 
     return EXIT_SUCCESS;
 }

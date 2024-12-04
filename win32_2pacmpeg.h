@@ -5,8 +5,7 @@
     #define __ICON_ID 101
 #endif
 
-struct platform_thread_info 
-{
+struct platform_thread_info {
     SECURITY_ATTRIBUTES cmd_stream_attribs;
     STARTUPINFO cmd_stream_startupinfo;
     PROCESS_INFORMATION cmd_stream_processinfo;
@@ -19,8 +18,7 @@ struct platform_thread_info
     program_enum prog_enum;
 };
 
-struct win32_thread_args 
-{
+struct win32_thread_args {
     text_buffer_group *_tbuf_group;
     platform_thread_info *_thread_info;
     runtime_vars *_rt_vars;
