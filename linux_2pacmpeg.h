@@ -4,12 +4,11 @@
 struct platform_thread_info {
     int file_descriptor;
     pid_t proc_id;
-    FILE *read_pipe; //not used i think?
     pthread_t read_thread_handle;
     program_enum prog_enum;
 };
 
-//TODO: refactor this redundant shit
+//TODO: get rid of this shit
 struct linux_thread_args {
     text_buffer_group *_tbuf_group;
     platform_thread_info *_thread_info;
@@ -30,7 +29,8 @@ inline bool32 platform_file_exists(char *file_path);
 inline bool32 platform_directory_exists(char *directory_name);
 INTERNAL bool32 platform_read_file(char *file_path, char *destination, u64 *dest_size);
 INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer_size);
-INTERNAL void platform_load_font(runtime_vars *rt_vars);
+INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size);
+INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args);
 
 #define LINUX_2PACMPEG_DOT_H
 #endif

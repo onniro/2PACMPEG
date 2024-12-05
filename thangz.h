@@ -58,6 +58,7 @@ typedef float f32;
 typedef double f64;
 
 typedef int bool32;
+typedef char bool8;
 
 typedef struct {
     f32 x;

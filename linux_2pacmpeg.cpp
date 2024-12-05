@@ -253,13 +253,44 @@ INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer
     return result;
 }
 
-INTERNAL void platform_load_font(runtime_vars *rt_vars) {
-    char _fontname_buffer[] = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf";
-    if(platform_file_exists(_fontname_buffer)) {
+//FIXME: very hood method of searching for fonts
+INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
+    if(platform_file_exists("/usr/share/fonts/TTF/DejaVuSans.ttf")) {
         rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-                                    _fontname_buffer,
-                                    15.0f, 0, 
-                                    ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+                                     "/usr/share/fonts/TTF/DejaVuSans.ttf",
+                                    font_size, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+    } else if(platform_file_exists("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")) {
+        rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
+                                     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                                    font_size, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+    } else if(platform_file_exists("/usr/share/fonts/TTF/dejavu/DejaVuSans.ttf")) {
+        rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
+                                     "/usr/share/fonts/TTF/dejavu/DejaVuSans.ttf",
+                                    font_size, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+    }
+}
+
+//TODO: add to windows version too
+INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args) {
+    bool8 fontsize_set = false, use_bmp_font = false;
+    float font_size = 16.0f;
+   
+    if(arg_count > 1) {
+        for(int arg_index = 0; arg_index < arg_count; ++arg_index) {
+            if(!use_bmp_font && !strcmp(args[arg_index], "--bitmapfont")) {
+                use_bmp_font = true;
+            } else if(!fontsize_set && !strcmp(args[arg_index], "--fontsize")) {
+                if(args[arg_index + 1]) {
+                    font_size = strtof(args[arg_index + 1], 0);
+                    printf("font_size:%f\n", font_size);
+                    fontsize_set = true;
+                }
+            }
+        }
+    }
+
+    if(!use_bmp_font) {
+        platform_load_font(rt_vars, font_size);
     }
 }
 
@@ -292,7 +323,7 @@ extern int main(int arg_count, char **args) {
     platform_thread_info thread_info = {0};
 
     glfwMakeContextCurrent(rt_vars.win_ptr);
-    glfwSwapInterval(0); // NOTE: it seems like this call was being ignored before
+    glfwSwapInterval(0);
     glfwSetDropCallback(rt_vars.win_ptr, (GLFWdropfun)glfw_drop_callback);
 
     IMGUI_CHECKVERSION();
@@ -306,13 +337,6 @@ extern int main(int arg_count, char **args) {
     ImGui_ImplGlfw_InitForOpenGL(rt_vars.win_ptr, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    //TODO: do something about thsi
-#if 1
-    if(!args[1] || strcmp(args[1], "--use-bitmap-font")) { 
-        platform_load_font(&rt_vars); 
-    }
-#endif
-
     program_memory p_memory = {0};
     platform_make_heap_buffer(&p_memory, PMEMORY_AMT);
 
@@ -324,7 +348,7 @@ extern int main(int arg_count, char **args) {
     tbuf_group.input_path_buffer =      (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
     tbuf_group.user_cmd_buffer =        (s8 *)heapbuf_alloc_region(&p_memory, PMEM_USRCOMMANDBUFFERSIZE);
     tbuf_group.output_path_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
-    tbuf_group.default_path_buffer =    (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE); // no this is not an accident (but it is retarded)
+    tbuf_group.default_path_buffer =    (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE); //no this is not an accident (but it is retarded)
     tbuf_group.wchar_input_buffer =     (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
     tbuf_group.command_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
     tbuf_group.temp_buffer =            (s8 *)heapbuf_alloc_region(&p_memory, PMEM_TEMPBUFFERSIZE);
@@ -332,7 +356,7 @@ extern int main(int arg_count, char **args) {
     tbuf_group.stdout_line_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
     tbuf_group.stdout_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
 
-    // ?? ok
+    //?? ok
     if(tbuf_group.default_path_buffer) { 
         tbuf_group.default_path_buffer[0] = 0x0; 
     }
@@ -360,6 +384,8 @@ extern int main(int arg_count, char **args) {
     memset(p_table.name_array, 0, PRESETNAME_PITCH*MAX_PRESETS);
     p_table.command_table = (s8 **)heapbuf_alloc_region(&p_memory, MAX_PRESETS);
     load_startup_files(&tbuf_group, &p_table);
+
+    platform_process_args(&rt_vars, arg_count, args);
 
 #if _2PACMPEG_DEBUG
     printf("-- TRACELOG START --\nmemory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\n", 
