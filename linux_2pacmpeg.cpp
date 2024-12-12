@@ -271,6 +271,7 @@ INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
 }
 
 //TODO: add to windows version too
+//NOTE: is this done?
 INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args) {
     bool8 fontsize_set = false, use_bmp_font = false;
     float font_size = 16.0f;

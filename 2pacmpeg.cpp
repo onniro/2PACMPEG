@@ -75,7 +75,8 @@ INTERNAL void show_diagnostic(text_buffer_group *tbuf_group) {
         }
     }
 
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() - 15.0f);
+    ImVec2 text_dimensions = ImGui::CalcTextSize(tbuf_group->diagnostic_buffer);
+    ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (text_dimensions.y/2.0f));
     ImGui::Text(tbuf_group->diagnostic_buffer);
 
     if(tbuf_group->diagnostic_buffer[0]) { 

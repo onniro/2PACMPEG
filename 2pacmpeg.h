@@ -96,6 +96,8 @@ inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
 INTERNAL void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list);
 INTERNAL text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group);
 INTERNAL last_diagnostic_type log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);
+//INTERNAL void show_diagnostic(text_buffer_group *tbuf_group, runtime_vars *rtvars);
+INTERNAL void show_diagnostic(text_buffer_group *tbuf_group);
 INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table);
 inline void adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index, int subtract_from_ceil);
 INTERNAL void save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table);
