@@ -73,7 +73,7 @@ typedef struct {
 
 #if defined(THANGZ_STRING)
 
-inline u32 string_length(s8 *string) {
+static inline u32 string_length(s8 *string) {
     u32 count = 0;
     if(string) { 
         while(*string++) { 
@@ -84,19 +84,19 @@ inline u32 string_length(s8 *string) {
     return count;
 }
 
-inline s8 *string_copy(s8 *destination, s8 *source) {
+static inline s8 *string_copy(s8 *destination, s8 *source) {
     while(*destination++ = *source++);
     return destination;
 }
 
-inline s8 *string_n_copy(s8 *destination, s8 *source, u32 char_amount) {
+static inline s8 *string_n_copy(s8 *destination, s8 *source, u32 char_amount) {
     for(u32 index = 0; index < char_amount; ++index) { 
         *destination++ = *source++; 
     }
     return destination;
 }
 
-inline void *mem_copy(void *destination, void *source, u64 bytes) {
+static inline void *mem_copy(void *destination, void *source, u64 bytes) {
     while(bytes) {
         *destination = *(u8 *)source += 1;
         --bytes;
@@ -104,7 +104,7 @@ inline void *mem_copy(void *destination, void *source, u64 bytes) {
     return destination;
 }
 
-inline void *mem_set_value(void *destination, u8 value, u64 bytes) {
+static inline void *mem_set_value(void *destination, u8 value, u64 bytes) {
     u8 *temp = (u8 *)destination;
     while(bytes) {
         *temp++ = value;
@@ -124,7 +124,7 @@ inline void *mem_set_value(void *destination, u8 value, u64 bytes) {
 #include "time.h"
 
 //(microseconds)
-static uint64_t posixapi_get_timestamp(void) {
+static inline uint64_t posixapi_get_timestamp(void) {
     uint64_t result;
     struct timespec tspec = {0};
     clock_gettime(CLOCK_MONOTONIC, &tspec);

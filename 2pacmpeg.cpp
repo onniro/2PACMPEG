@@ -97,10 +97,9 @@ INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_
     #endif
 #endif
         // can cause weird shit if the user is trying to be retarded
-        s8 *default_dir_ptr = strchr(tbuf_group->config_buffer,
-                                    TOKEN_OUTPUTDIR);
+        s8 *default_dir_ptr = strchr(tbuf_group->config_buffer, TOKEN_OUTPUTDIR);
         if(default_dir_ptr && (*(default_dir_ptr + 1) != '\n')) {
-            strncpy(tbuf_group->default_path_buffer,
+            strncpy(tbuf_group->default_path_buffer, 
                     default_dir_ptr + 1,
                     command_length(default_dir_ptr + 1));
         }
@@ -143,9 +142,7 @@ INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_
         s8 _temp_buf[256];
         snprintf(_temp_buf, 256, "[info]: found %i presets.", p_table->entry_amount);
 
-        log_diagnostic(_temp_buf,
-                        last_diagnostic_type::info,
-                        tbuf_group);
+        log_diagnostic(_temp_buf, last_diagnostic_type::info, tbuf_group);
     } else {
         log_diagnostic("[info]: preset file doesn't exist or couldn't be loaded.",
                         last_diagnostic_type::undefined,
@@ -170,15 +167,13 @@ inline void adjust_pointer_table(preset_table *p_table,
             move_index < (p_table->entry_amount - subtract_from_ceil);
             ++move_index) {
         if(!move_index) {
-            p_table->command_table[0] = 
-                strchr(tbuf_group->config_buffer, TOKEN_PRESETCMD);
+            p_table->command_table[0] = strchr(tbuf_group->config_buffer, TOKEN_PRESETCMD);
 
             if(p_table->command_table[0]) { 
                 p_table->command_table[0] += 1; 
             }
         } else {
-            p_table->command_table[move_index] = strchr(p_table->command_table[move_index - 1], 
-                                                        TOKEN_PRESETCMD);
+            p_table->command_table[move_index] = strchr(p_table->command_table[move_index - 1], TOKEN_PRESETCMD);
 
             if(p_table->command_table[move_index]) { 
                 p_table->command_table[move_index] += 1; 
@@ -310,7 +305,7 @@ INTERNAL void remove_preset(preset_table *p_table, text_buffer_group *tbuf_group
     s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index * PRESETNAME_PITCH)))) - 2;
     u32 preset_length = command_length(whole_preset) + 1;
 
-    //NOTE: this shit will never happen and i dont know why i wrote it but might as well leave it in as an easter egg lmao
+    //NOTE: this shit will never happen
     if(preset_length == -1) {
         log_diagnostic("[config error]: something weird happened.",
                         last_diagnostic_type::error,

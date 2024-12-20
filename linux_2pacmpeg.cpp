@@ -2,18 +2,18 @@
 #define _2PACMPEG_LINUX 1
 #undef _2PACMPEG_WIN32
 
-#include "stdint.h"
-#include "stdio.h"
-#include "string.h"
-#include "sys/mman.h"
-#include "sys/stat.h"
-#include "unistd.h"
-#include "fcntl.h"
-#include "pthread.h"
-#include "stdlib.h"
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <pthread.h>
+#include <stdlib.h>
 
 #if _2PACMPEG_DEBUG
-    #include "errno.h"
+    #include <errno.h>
 #endif
 
 #include "imgui.h"
@@ -161,10 +161,10 @@ INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
     if(pthread_create(&thread_info->read_thread_handle, 0, 
                         platform_thread_read_proc_stdout,
                         (void *)&thread_args)) {
-        log_diagnostic("[fatal error]: spawning thread failed.",
+        log_diagnostic("[error]: spawning thread failed.",
                         last_diagnostic_type::error, tbuf_group);
 #if _2PACMPEG_DEBUG
-        fprintf(stderr, "[fatal error]: spawning thread failed.");
+        fprintf(stderr, "[error]: spawning thread failed.");
 #endif
 
         return;
@@ -239,9 +239,7 @@ INTERNAL bool32 platform_read_file(char *file_path, char *destination, u64 *dest
 
 INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer_size) {
     bool32 result = false;
-    int file_descriptor = open(file_path, 
-                        O_CREAT|O_WRONLY|O_TRUNC, 
-                        S_IRUSR|S_IWUSR);
+    int file_descriptor = open(file_path, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
 
     if(file_descriptor != -1) {
         s64 write_status = write(file_descriptor, in_buffer, buffer_size);  
@@ -270,17 +268,16 @@ INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
     }
 }
 
-//TODO: add to windows version too
-//NOTE: is this done?
+//TODO: add to windows too
 INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args) {
     bool8 fontsize_set = false, use_bmp_font = false;
     float font_size = 16.0f;
    
     if(arg_count > 1) {
         for(int arg_index = 0; arg_index < arg_count; ++arg_index) {
-            if(!use_bmp_font && !strcmp(args[arg_index], "--bitmapfont")) {
+            if(!use_bmp_font && !strcmp(args[arg_index], "-bitmapfont")) {
                 use_bmp_font = true;
-            } else if(!fontsize_set && !strcmp(args[arg_index], "--fontsize")) {
+            } else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
                 if(args[arg_index + 1]) {
                     font_size = strtof(args[arg_index + 1], 0);
                     printf("font_size:%f\n", font_size);
@@ -295,7 +292,7 @@ INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char *
     }
 }
 
-extern int main(int arg_count, char **args) {
+int main(int arg_count, char **args) {
     if(!glfwInit()) {
         fprintf(stderr, "glfwInit failed.\n");
         return -1;

@@ -1,5 +1,5 @@
 #include <windows.h>
-// 101 ICON "coolicon.ico"
+//101 ICON "coolicon.ico"
 //101 ICON "misc\\FFMPAC.ico"
 101 ICON "misc\\FFMPAC_DE.ico"
 VS_VERSION_INFO VERSIONINFO
