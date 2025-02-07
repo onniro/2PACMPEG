@@ -32,7 +32,6 @@ INTERNAL void *platform_make_heap_buffer(program_memory *target, u64 pool_size) 
                                    PAGE_READWRITE);
     target->write_ptr = target->memory;
     target->capacity = pool_size;
-
     return target->memory;
 }
 
@@ -61,8 +60,7 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
     win32_thread_args *thread_args = (win32_thread_args *)thread_args_voidptr;
 
     //bit verbose but aight
-    switch(*thread_args->_prog_enum) 
-    {
+    switch(*thread_args->_prog_enum) {
     case ffmpeg: {
         u64 stdout_buffer_bytes = 0;
 
@@ -235,7 +233,6 @@ INTERNAL wchar_t *platform_file_input_dialog(wchar_t *output_buffer) {
 INTERNAL s8 *platform_get_working_directory(s8 *destination, DWORD buffer_size) {
     s8 *result = 0;
     DWORD path_length = GetModuleFileNameA(0, destination, buffer_size);
-
     if(path_length) {
         result = destination;
         for(DWORD char_index = path_length - 1;
@@ -244,7 +241,6 @@ INTERNAL s8 *platform_get_working_directory(s8 *destination, DWORD buffer_size) 
             destination[char_index] = '\0'; 
         }
     }
-
     return result;
 }
 
@@ -253,7 +249,6 @@ inline bool32 platform_file_exists(s8 *file_path) {
     if(PathFileExistsA(file_path)) { 
         result = true; 
     }
-
     return result;
 }
 
@@ -262,7 +257,6 @@ inline bool32 platform_directory_exists(s8 *directory_name) {
     if(PathIsDirectoryA(directory_name)) { 
         result = true; 
     }
-
     return result;
 }
 
@@ -320,13 +314,18 @@ INTERNAL bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_s
 
 INTERNAL void check_ffmpeg_existence(text_buffer_group *tbuf_group) {
     char ffmpeg_path[PMEM_WORKINGDIRSIZE];
-    snprintf(ffmpeg_path, PMEM_WORKINGDIRSIZE, "%s\\ffmpeg\\ffmpeg.exe", tbuf_group->working_directory);
+    snprintf(ffmpeg_path, PMEM_WORKINGDIRSIZE, 
+            "%s\\ffmpeg\\ffmpeg.exe", 
+            tbuf_group->working_directory);
     
     if(!platform_file_exists(ffmpeg_path)) {
         log_diagnostic("[warning]: ffmpeg doesn't seem to be discoverable to 2PACMPEG.",
                     last_diagnostic_type::error, tbuf_group);
     } else {
-        snprintf(ffmpeg_path, PMEM_WORKINGDIRSIZE, "%s\\ffmpeg\\ffprobe.exe", tbuf_group->working_directory);
+        snprintf(ffmpeg_path, 
+                PMEM_WORKINGDIRSIZE, 
+                "%s\\ffmpeg\\ffprobe.exe", 
+                tbuf_group->working_directory);
         if(!platform_file_exists(ffmpeg_path)) {
             log_diagnostic("[warning]: some features may not work because ffprobe.exe seems to be missing.",
                         last_diagnostic_type::error, tbuf_group);
@@ -334,13 +333,28 @@ INTERNAL void check_ffmpeg_existence(text_buffer_group *tbuf_group) {
     }
 }
 
-int __stdcall WinMain(HINSTANCE instance, HINSTANCE, char *cmd_args, int) {
-#define SCHEDULER_MS_RESOLUTION 1
+INTERNAL void win32_get_timestamp(LARGE_INTEGER *dest) {
+    QueryPerformanceCounter(dest);
+}
+
+INTERNAL DWORD win32_get_deltatime_ms(LONGLONG start, LONGLONG end, LONGLONG perfcounter_freq) {
+    DWORD result = (DWORD)((((float)end - (float)start)/(float)perfcounter_freq)*1000.0f);
+    return result;
+}
+
+int __stdcall WinMain(HINSTANCE instance, 
+                    HINSTANCE prev_instance, 
+                    char *cmd_args, 
+                    int show_cmd) {
+#define SCHEDULER_MS_RESOLUTION ((UINT)1)
     if(timeBeginPeriod(SCHEDULER_MS_RESOLUTION) == TIMERR_NOERROR) {
 #if _2PACMPEG_DEBUG
         OutputDebugStringA("[info]: set Windows scheduler granularity to 1 millisecond.\n");
 #endif
     }
+
+    LARGE_INTEGER start_timestamp, end_timestamp, perfcounter_freq;
+    QueryPerformanceFrequency(&perfcounter_freq);
 
     if(!glfwInit()) {
         OutputDebugStringA("glfwInit() failed.\n");
@@ -369,8 +383,7 @@ int __stdcall WinMain(HINSTANCE instance, HINSTANCE, char *cmd_args, int) {
 
     glfwMakeContextCurrent(rt_vars.win_ptr);
     glfwSwapInterval(0); //this just doesn't work or what?
-    glfwSetDropCallback(rt_vars.win_ptr, 
-                        (GLFWdropfun)glfw_drop_callback);
+    glfwSetDropCallback(rt_vars.win_ptr, (GLFWdropfun)glfw_drop_callback);
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -384,7 +397,6 @@ int __stdcall WinMain(HINSTANCE instance, HINSTANCE, char *cmd_args, int) {
     ImGui_ImplOpenGL3_Init("#version 130");
 
     if(!strstr(cmd_args, "--use-bitmap-font")) {
-        //TODO resolve font path dynamically since this might cause problems
         if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) {
             rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\lucon.ttf",
                                         13.0f, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
@@ -461,10 +473,18 @@ int __stdcall WinMain(HINSTANCE instance, HINSTANCE, char *cmd_args, int) {
 
     check_ffmpeg_existence(&tbuf_group);
 
+    DWORD deltatime, ms2sleep;
     while(!glfwWindowShouldClose(rt_vars.win_ptr)) {
+        win32_get_timestamp(&start_timestamp);
         update_window(&tbuf_group, &p_table, &rt_vars, &thread_info);
-        // HYPERBRUH
-        Sleep(16);
+        win32_get_timestamp(&end_timestamp);
+        deltatime = win32_get_deltatime_ms(start_timestamp.QuadPart, 
+                                        end_timestamp.QuadPart, 
+                                        perfcounter_freq.QuadPart);
+        if(deltatime < MAX_FRAMETIME_MILLISECONDS) {
+            ms2sleep = MAX_FRAMETIME_MILLISECONDS - deltatime;
+            Sleep(ms2sleep);
+        }
     }
 
     ImGui_ImplOpenGL3_Shutdown();

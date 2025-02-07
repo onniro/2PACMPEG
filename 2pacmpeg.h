@@ -32,7 +32,11 @@
 #define TOKEN_PRESETNAME (char)0xAC
 #define TOKEN_PRESETCMD (char)0xAF
 
-#define MAX_FRAMETIME_MICROSECONDS (useconds_t)16667 //(for 60 fps)
+#if _2PACMPEG_LINUX
+    #define MAX_FRAMETIME_MICROSECONDS ((useconds_t)16667)
+#elif _2PACMPEG_WIN32
+    #define MAX_FRAMETIME_MILLISECONDS ((DWORD)16)
+#endif
 
 struct program_memory {
     void *memory;

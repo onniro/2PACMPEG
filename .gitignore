@@ -7,3 +7,9 @@
 /source_zips
 /release_zips
 /debug
+
+#was testing to build for windows with the mingw programs on linux
+#will probably get pushed one day (if i update this program)
+/mingw_build
+/test_linux_mingw_build.sh
+

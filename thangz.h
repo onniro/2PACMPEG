@@ -134,8 +134,10 @@ static inline uint64_t posixapi_get_timestamp(void) {
 }
 
 //idk why this is here
-static bool32 posixapi_get_stdout(char *command, int *output_fd, 
-                            pid_t *proc_id, bool32 include_stderr) {
+static bool32 posixapi_get_stdout(char *command, 
+                                int *output_fd, 
+                                pid_t *proc_id, 
+                                bool32 include_stderr) {
     bool32 result = false;
 
     int pipe_fd[2];
@@ -152,12 +154,12 @@ static bool32 posixapi_get_stdout(char *command, int *output_fd,
         close(pipe_fd[STDIN_FILENO]);
         dup2(pipe_fd[STDOUT_FILENO], STDOUT_FILENO);
 
-        if(include_stderr) 
-        { dup2(STDOUT_FILENO, STDERR_FILENO); }
+        if(include_stderr) {dup2(STDOUT_FILENO, STDERR_FILENO);}
 
         close(pipe_fd[STDOUT_FILENO]);
 
         char _temp[1024*8];
+        //idk why this only works with double single quotes
         snprintf(_temp, (1024*8) - 1, "''%s''", command);
 
         execl("/bin/sh", "sh", "-c", _temp, (char *)0);
