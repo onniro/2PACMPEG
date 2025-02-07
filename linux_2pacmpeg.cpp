@@ -248,10 +248,9 @@ INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
 #endif
 }
 
-//TODO: add to windows too
 INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args) {
     bool8 fontsize_set = false, use_bmp_font = false;
-    float font_size = 16.0f;
+    float font_size = DEFAULT_FONT_SIZE;
    
     if(arg_count > 1) {
         for(int arg_index = 0; arg_index < arg_count; ++arg_index) {
@@ -260,16 +259,13 @@ INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char *
             } else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
                 if(args[arg_index + 1]) {
                     font_size = strtof(args[arg_index + 1], 0);
-                    printf("font_size:%f\n", font_size);
                     fontsize_set = true;
                 }
             }
         }
     }
 
-    if(!use_bmp_font) {
-        platform_load_font(rt_vars, font_size);
-    }
+    if(!use_bmp_font) {platform_load_font(rt_vars, font_size);}
 }
 
 int main(int arg_count, char **args) {

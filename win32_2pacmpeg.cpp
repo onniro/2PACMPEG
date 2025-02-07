@@ -312,6 +312,15 @@ INTERNAL bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_s
     return result;
 }
 
+INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
+    if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) {
+        rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\lucon.ttf",
+                                    DEFAULT_FONT_SIZE, 
+                                    0, 
+                                    ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+    }
+}
+
 INTERNAL void check_ffmpeg_existence(text_buffer_group *tbuf_group) {
     char ffmpeg_path[PMEM_WORKINGDIRSIZE];
     snprintf(ffmpeg_path, PMEM_WORKINGDIRSIZE, 
@@ -340,6 +349,26 @@ INTERNAL void win32_get_timestamp(LARGE_INTEGER *dest) {
 INTERNAL DWORD win32_get_deltatime_ms(LONGLONG start, LONGLONG end, LONGLONG perfcounter_freq) {
     DWORD result = (DWORD)((((float)end - (float)start)/(float)perfcounter_freq)*1000.0f);
     return result;
+}
+
+INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args) {
+    bool8 fontsize_set = false, use_bmp_font = false;
+    float font_size = DEFAULT_FONT_SIZE;
+   
+    if(arg_count > 1) {
+        for(int arg_index = 0; arg_index < arg_count; ++arg_index) {
+            if(!use_bmp_font && !strcmp(args[arg_index], "-bitmapfont")) {
+                use_bmp_font = true;
+            } else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
+                if(args[arg_index + 1]) {
+                    font_size = strtof(args[arg_index + 1], 0);
+                    fontsize_set = true;
+                }
+            }
+        }
+    }
+
+    if(!use_bmp_font) {platform_load_font(rt_vars, font_size);}
 }
 
 int __stdcall WinMain(HINSTANCE instance, 
@@ -382,7 +411,7 @@ int __stdcall WinMain(HINSTANCE instance,
     platform_thread_info thread_info = {0};
 
     glfwMakeContextCurrent(rt_vars.win_ptr);
-    glfwSwapInterval(0); //this just doesn't work or what?
+    glfwSwapInterval(0); //this doesn't seem to work for some reason so i'm doing this manually
     glfwSetDropCallback(rt_vars.win_ptr, (GLFWdropfun)glfw_drop_callback);
 
     IMGUI_CHECKVERSION();
@@ -396,12 +425,7 @@ int __stdcall WinMain(HINSTANCE instance,
     ImGui_ImplGlfw_InitForOpenGL(rt_vars.win_ptr, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    if(!strstr(cmd_args, "--use-bitmap-font")) {
-        if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) {
-            rt_vars.default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\lucon.ttf",
-                                        13.0f, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
-        }
-    }
+    platform_process_args(&rt_vars, __argc, __argv);
 
     program_memory p_memory = {0};
     platform_make_heap_buffer(&p_memory, PMEMORY_AMT);

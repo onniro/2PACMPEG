@@ -34,8 +34,10 @@
 
 #if _2PACMPEG_LINUX
     #define MAX_FRAMETIME_MICROSECONDS ((useconds_t)16667)
+    #define DEFAULT_FONT_SIZE (15.0f)
 #elif _2PACMPEG_WIN32
     #define MAX_FRAMETIME_MILLISECONDS ((DWORD)16)
+    #define DEFAULT_FONT_SIZE (13.0f)
 #endif
 
 struct program_memory {
