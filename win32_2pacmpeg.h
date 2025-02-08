@@ -39,6 +39,11 @@ inline bool32 platform_file_exists(s8 *file_path);
 inline bool32 platform_directory_exists(s8 *directory_name);
 INTERNAL bool32 platform_read_file(s8 *file_path, s8 *destination, u64 *dest_size);
 INTERNAL bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_size);
+INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size);
+INTERNAL void check_ffmpeg_existence(text_buffer_group *tbuf_group);
+INTERNAL void win32_get_timestamp(LARGE_INTEGER *dest);
+INTERNAL DWORD win32_get_deltatime_ms(LONGLONG start, LONGLONG end, LONGLONG perfcounter_freq);
+INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args);
 
 #define WIN32_2PACMPEG_DOT_H
 #endif
