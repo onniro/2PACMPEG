@@ -19,6 +19,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_internal.h"
 
 #define GLFW_EXPOSE_NATIVE_X11
 #include "GLFW/glfw3.h"
@@ -75,15 +76,12 @@ extern void *platform_thread_read_proc_stdout(void *args_voidptr) {
             if(!bytes_read) { 
                 break; 
             }
-            //this causes behavior that makes me question my understanding of read()
-            //line_buffer[bytes_read] = 0x0;
             stdout_buffer_bytes += bytes_read;
             if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
                 full_buffer[0] = 0x0;
                 stdout_buffer_bytes = 0;
             }
-            strncat(full_buffer, line_buffer, 
-                    PMEM_STDOUTBUFFERSIZE - stdout_buffer_bytes - 1);
+            strncat(full_buffer, line_buffer, PMEM_STDOUTBUFFERSIZE - stdout_buffer_bytes - 1);
         }
 
         log_diagnostic("[info]: FFmpeg exited.", last_diagnostic_type::info, thread_args->_tbuf_group);
@@ -136,8 +134,7 @@ INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
                                             platform_thread_info *thread_info,
                                             runtime_vars *rt_vars) {
 #if _2PACMPEG_DEBUG
-    printf("[debug]: attempting to execute:\n%s\n", 
-            tbuf_group->command_buffer);
+    printf("[debug]: attempting to execute:\n%s\n", tbuf_group->command_buffer);
 #endif
     LOCAL_STATIC linux_thread_args thread_args;
     thread_args._tbuf_group =   tbuf_group;
@@ -217,7 +214,6 @@ INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer
     if(file_descriptor != -1) {
         s64 write_status = write(file_descriptor, in_buffer, buffer_size);  
         result = (write_status == buffer_size);
-
         close(file_descriptor);
     }
     return result;
@@ -225,27 +221,15 @@ INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer
 
 //FIXME: very hood method of searching for fonts
 INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
-#if 0
-    if(platform_file_exists("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")) {
-        st_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-                                     "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                                    font_size, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
-    } else if(platform_file_exists("/usr/share/fonts/TTF/dejavu/DejaVuSans.ttf")) {
-        rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-                                     "/usr/share/fonts/TTF/dejavu/DejaVuSans.ttf",
-                                    font_size, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
-    }
-#else
+    char font2load[1024];
+    font2load[0] = 0;
     if(platform_file_exists("/usr/share/fonts/liberation/LiberationMono-Regular.ttf")) {
-        rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-                                    "/usr/share/fonts/liberation/LiberationMono-Regular.ttf",
-                                    font_size, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+        strncpy(font2load, "/usr/share/fonts/liberation/LiberationMono-Regular.ttf", 1024);
     } else if(platform_file_exists("/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf")) {
-        rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF(
-                                    "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
-                                    font_size, 0, ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+        strncpy(font2load, "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 1024);
     }
-#endif
+
+    if(*font2load) {imgui_font_load_glyphs(font2load, font_size, rt_vars);}
 }
 
 INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args) {
@@ -259,6 +243,7 @@ INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char *
             } else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
                 if(args[arg_index + 1]) {
                     font_size = strtof(args[arg_index + 1], 0);
+                    if(font_size == 0.0f) {font_size = DEFAULT_FONT_SIZE;}
                     fontsize_set = true;
                 }
             }
@@ -301,7 +286,7 @@ int main(int arg_count, char **args) {
     glfwSetDropCallback(rt_vars.win_ptr, (GLFWdropfun)glfw_drop_callback);
 
     IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    ImGuiContext *imgui_context = ImGui::CreateContext();
 
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     ImGui::GetIO().ConfigFlags |= ImGuiWindowFlags_NoSavedSettings;
@@ -362,7 +347,7 @@ int main(int arg_count, char **args) {
     platform_process_args(&rt_vars, arg_count, args);
 
 #if _2PACMPEG_DEBUG
-    printf("-- TRACELOG START --\nmemory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\n", 
+    printf("-- LOG START --\nmemory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\n", 
             ((f32)(((u64)p_memory.write_ptr - (u64)p_memory.memory )) / 1024.0f / 1024.0f), 
             ((f32)p_memory.capacity) / 1024.0f / 1024.0f,
             tbuf_group.working_directory,
@@ -370,6 +355,7 @@ int main(int arg_count, char **args) {
 #endif
 
     uint64_t start_timestamp, end_timestamp, deltatime;
+    useconds_t us2sleep;
     while(!glfwWindowShouldClose(rt_vars.win_ptr)) {
         start_timestamp = posixapi_get_timestamp();
 
@@ -379,7 +365,8 @@ int main(int arg_count, char **args) {
         deltatime = end_timestamp - start_timestamp;
         
         if(deltatime < MAX_FRAMETIME_MICROSECONDS) { 
-            usleep(MAX_FRAMETIME_MICROSECONDS - (useconds_t)deltatime); 
+            us2sleep = MAX_FRAMETIME_MICROSECONDS - (useconds_t)deltatime;
+            usleep(us2sleep); 
         }
     }
 

@@ -15,6 +15,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "imgui_internal.h"
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "GLFW/glfw3.h"
@@ -79,9 +80,7 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
                 strncat(thread_args->_tbuf_group->stdout_buffer,
                         thread_args->_tbuf_group->stdout_line_buffer, 
                         PMEM_STDOUTBUFFERSIZE - stdout_buffer_bytes - 1);
-            } else { 
-                break; 
-            }
+            } else {break;}
         }
     } break;
 
@@ -97,9 +96,7 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
 
                 strncat(thread_args->_tbuf_group->ffprobe_buffer,
                         temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE);
-            } else { 
-                break; 
-            }
+            } else {break;}
         }
     } break;
 
@@ -246,17 +243,13 @@ INTERNAL s8 *platform_get_working_directory(s8 *destination, DWORD buffer_size) 
 
 inline bool32 platform_file_exists(s8 *file_path) {
     bool32 result = false;
-    if(PathFileExistsA(file_path)) { 
-        result = true; 
-    }
+    if(PathFileExistsA(file_path)) {result = true;}
     return result;
 }
 
 inline bool32 platform_directory_exists(s8 *directory_name) {
     bool32 result = false;
-    if(PathIsDirectoryA(directory_name)) { 
-        result = true; 
-    }
+    if(PathIsDirectoryA(directory_name)) {result = true;}
     return result;
 }
 
@@ -313,12 +306,13 @@ INTERNAL bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_s
 }
 
 INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
+    char font2load[1024];
+    font2load[0] = 0;
     if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) {
-        rt_vars->default_font = ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\Windows\\Fonts\\lucon.ttf",
-                                    DEFAULT_FONT_SIZE, 
-                                    0, 
-                                    ImGui::GetIO().Fonts->GetGlyphRangesDefault());
+        strncpy(font2load, "C:\\Windows\\Fonts\\lucon.ttf", 1024);
     }
+
+    if(*font2load) {imgui_font_load_glyphs(font2load, font_size, rt_vars);}
 }
 
 INTERNAL void check_ffmpeg_existence(text_buffer_group *tbuf_group) {
@@ -362,6 +356,7 @@ INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char *
             } else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
                 if(args[arg_index + 1]) {
                     font_size = strtof(args[arg_index + 1], 0);
+                    if(font_size == 0.0f) {font_size = DEFAULT_FONT_SIZE;}
                     fontsize_set = true;
                 }
             }
@@ -482,7 +477,7 @@ int __stdcall WinMain(HINSTANCE instance,
 #endif
 
 #if _2PACMPEG_DEBUG
-    OutputDebugStringA(" -- TRACELOG START -- \n");
+    OutputDebugStringA(" -- LOG START -- \n");
     sprintf(tbuf_group.temp_buffer, 
             "memory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\nffmpeg_path:%sffmpeg\\ffmpeg.exe\n", 
             ((f32)(((u64)p_memory.write_ptr - (u64)p_memory.memory )) / 1024.0f / 1024.0f), 

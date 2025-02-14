@@ -7,6 +7,22 @@ TODO: warnings for if ffmpeg or ffprobe isn't found on the system
 #include "thangz.h"
 #include "2pacmpeg.h"
 
+INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars) {
+    ImGuiIO &im_io = ImGui::GetIO();
+    //has to be static otherwise it will crash in AddFontFromFileTTF()
+    //due to the buffer mysteriously disappearing apparently
+    LOCAL_STATIC ImVector<ImWchar> glyph_ranges_buffer;
+    ImFontGlyphRangesBuilder ranges_builder;
+    ranges_builder.AddRanges(im_io.Fonts->GetGlyphRangesDefault());
+    ranges_builder.AddRanges(im_io.Fonts->GetGlyphRangesCyrillic());
+    //TODO: maybe add more glyphs
+    ranges_builder.BuildRanges(&glyph_ranges_buffer);
+    rt_vars->default_font = im_io.Fonts->AddFontFromFileTTF(font2load,
+                                font_size, 
+                                0, 
+                                glyph_ranges_buffer.Data);
+}
+
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) {
     void *result = 0;
     u64 free_memory = ((u64)pool->memory + pool->capacity) - (u64)pool->write_ptr;
@@ -39,20 +55,17 @@ INTERNAL last_diagnostic_type log_diagnostic(s8 *message,
                                 text_buffer_group *tbuf_group) {
     LOCAL_STATIC last_diagnostic_type last_diagnostic = undefined;
     if(message && tbuf_group) {
-        strncpy(tbuf_group->diagnostic_buffer,
-                message,
-                PMEM_DIAGNOSTICBUFFERSIZE);
+        strncpy(tbuf_group->diagnostic_buffer, message, PMEM_DIAGNOSTICBUFFERSIZE);
         tbuf_group->diagnostic_buffer[strlen(tbuf_group->diagnostic_buffer)] = 0x0;
     }
-    if(type != undefined) { 
-        last_diagnostic = type; 
-    }
+    if(type != undefined) {last_diagnostic = type;}
     return last_diagnostic;
 }
 
 INTERNAL void show_diagnostic(text_buffer_group *tbuf_group) {
     if(tbuf_group->diagnostic_buffer[0]) {
-        switch(log_diagnostic(0, last_diagnostic_type::undefined, 0)) {
+        last_diagnostic_type last_diagnostic = log_diagnostic(0, last_diagnostic_type::undefined, 0);
+        switch(last_diagnostic) {
         case error: {
             ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0xff, 0, 0, 0xFF));
         } break;
@@ -865,8 +878,7 @@ INTERNAL void preset_list_update(text_buffer_group *tbuf_group,
                         p_table->command_table[preset_index],
                         cmd_length);
             }
-        }
-        if(ImGui::BeginPopupContextItem(p_table->name_array + 
+        } if(ImGui::BeginPopupContextItem(p_table->name_array + 
                 (preset_index * PRESETNAME_PITCH))) {
             // TODO: change the names
             if(ImGui::Button("remove")) { 
@@ -878,8 +890,10 @@ INTERNAL void preset_list_update(text_buffer_group *tbuf_group,
     ImGui::EndChild();
 }
 
-INTERNAL void update_window(text_buffer_group *tbuf_group, preset_table *p_table, 
-                        runtime_vars *rt_vars, platform_thread_info *thread_info) {
+INTERNAL void update_window(text_buffer_group *tbuf_group, 
+                            preset_table *p_table, 
+                            runtime_vars *rt_vars, 
+                            platform_thread_info *thread_info) {
     glClearColor(0, 0, 0, 0xff);
     glClear(GL_COLOR_BUFFER_BIT);
     glfwPollEvents();
@@ -892,12 +906,18 @@ INTERNAL void update_window(text_buffer_group *tbuf_group, preset_table *p_table
     ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 70, 0, 0xFF));
     ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(0, 70, 0, 0xFF));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32(0, 0, 0, 0xFF));
-    ImGui::Begin(".", 0, ImGuiWindowFlags_NoTitleBar
-                           |ImGuiWindowFlags_NoResize
-                           |ImGuiWindowFlags_NoMove
-                           |ImGuiWindowFlags_NoScrollbar
-                           |ImGuiWindowFlags_NoSavedSettings
-                           |ImGuiWindowFlags_NoDecoration);
+    ImGui::Begin("main window", 0, ImGuiWindowFlags_NoTitleBar
+                                    |ImGuiWindowFlags_NoResize
+                                    |ImGuiWindowFlags_NoMove
+                                    |ImGuiWindowFlags_NoScrollbar
+                                    |ImGuiWindowFlags_NoSavedSettings
+                                    |ImGuiWindowFlags_NoDecoration);
+
+    //TODO: remap CTRL+TAB so that it toggles between the columns instead of doing nothing
+    //(tried a lot of stuff but i cant get anything to work)
+    ImGui::SetShortcutRouting(ImGuiMod_Ctrl|ImGuiKey_Tab, 0, ImGuiButtonFlags_NoSetKeyOwner);
+    ImGui::SetShortcutRouting(ImGuiMod_Ctrl|ImGuiMod_Shift|ImGuiKey_Tab, 0, ImGuiButtonFlags_NoSetKeyOwner);
+
 #define _2PACMPEG_IMGUI_METRICS 0
 #if _2PACMPEG_IMGUI_METRICS
     ImGui::ShowMetricsWindow();
@@ -907,7 +927,7 @@ INTERNAL void update_window(text_buffer_group *tbuf_group, preset_table *p_table
     ImGui::Columns(2, "columns");
     if(first_loop) {
         first_loop = false;
-        ImGui::SetColumnWidth(0, (f32)rt_vars->win_width * 0.75);
+        ImGui::SetColumnWidth(0, (f32)rt_vars->win_width*0.75f);
     }
 
     basic_controls_update(tbuf_group, p_table, rt_vars, thread_info);
@@ -915,6 +935,7 @@ INTERNAL void update_window(text_buffer_group *tbuf_group, preset_table *p_table
     preset_list_update(tbuf_group, p_table, rt_vars);
     ImGui::NextColumn();
     show_diagnostic(tbuf_group);
+
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
