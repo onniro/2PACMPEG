@@ -367,17 +367,13 @@ int __stdcall WinMain(HINSTANCE instance,
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
 
+    char win_title[64];
+    get_window_title(win_title);
     runtime_vars rt_vars = {0};
     rt_vars.win_width = 960;
     rt_vars.win_height = 540;
     rt_vars.ffmpeg_is_running = false;
-    rt_vars.win_ptr = glfwCreateWindow(rt_vars.win_width, rt_vars.win_height, 
-#if !_2PACMPEG_DEBUG
-            "2PACMPEG v2.3 - 2PAC 4 LYFE (Definitive Edition)", 
-#else
-            "2PACMPEG v2.3 - 2PAC 4 LYFE (Definitive Edition) (debug)", 
-#endif
-            0, 0);
+    rt_vars.win_ptr = glfwCreateWindow(rt_vars.win_width, rt_vars.win_height, win_title,0, 0);
     if(!rt_vars.win_ptr) {
         OutputDebugStringA("null pointer to GLFW window\n");
         return -1;

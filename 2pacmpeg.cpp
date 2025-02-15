@@ -93,6 +93,22 @@ INTERNAL void process_args_gui(runtime_vars *rt_vars, int arg_count, char **args
     { platform_load_font(rt_vars, font_size); }
 }
 
+INTERNAL void get_window_title(char *title) {
+#if _2PACMPEG_DEBUG
+    sprintf(title, 
+            "(debug) 2PACMPEG v%u.%u.%u - 2PAC 4 LYFE (Definitive Edition)",
+            _2PACMPEG_VERSION_MAJOR,
+            _2PACMPEG_VERSION_MINOR,
+            _2PACMPEG_VERSION_PATCH);
+#else
+    sprintf(title, 
+            "2PACMPEG v%u.%u.%u - 2PAC 4 LYFE (Definitive Edition)",
+            _2PACMPEG_VERSION_MAJOR,
+            _2PACMPEG_VERSION_MINOR,
+            _2PACMPEG_VERSION_PATCH);
+#endif
+}
+
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) {
     void *result = 0;
     u64 free_memory = ((u64)pool->memory + pool->capacity) - (u64)pool->write_ptr;
@@ -115,16 +131,14 @@ INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_v
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesGreek());
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesJapanese());
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesKorean());
-
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesThai());
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesVietnamese());
 #if _2PACMPEG_ENABLE_CHINESE_SIMPLIFIED
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesChineseSimplifiedCommon());
 #endif
 #if _2PACMPEG_ENABLE_CHINESE_FULL
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesChineseFull());
 #endif
-
-    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesThai());
-    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesVietnamese());
 
     ranges_builder.BuildRanges(&glyph_ranges_buffer);
     rt_vars->default_font = im_io_fonts->AddFontFromFileTTF(font2load,
