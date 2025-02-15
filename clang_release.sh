@@ -1,5 +1,5 @@
 #!/bin/bash
-echo -e '\033[1;33mNOTE: make sure to update version macros in 2pacmpeg.h before releasing 4real!\033[0m\n'
+echo "NOTE: make sure to update version macros in 2pacmpeg.h before releasing 4real!"
 
 WORKDIR="$PWD/release_linux"
 SOURCES="$PWD/deps/imgui/imgui*.cpp $PWD/linux_2pacmpeg.cpp"
