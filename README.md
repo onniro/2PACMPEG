@@ -2,19 +2,18 @@
 
 <img alt="original icon for 2PACMPEG" src="misc/FFMPAC_OG.ico" style="width:40%;">
 
-_pac was tha meanin of lyfe..._
+_pac wuz tha meanin of lyfe..._
 
 # 0. yapping
-<p>this program was written for the purpose of performing certain processing (such as compression or format conversion) on shadowplay clips and whatnot so that they can be uploaded to discord without having to increase the file upload size limit by wasting money on nitro</p>
+<p>this program was written for the purpose of making it slightly easier to do certain processing (such as compression and format conversion) specifically on shadowplay clips and whatnot so that they can be uploaded to discord without having to increase the file upload size limit by wasting money on nitro</p>
 
 # 1. installation
 ## 1.1. Windows
-- step 1: obtain copies of ffmpeg.exe and ffprobe.exe (<https://www.ffmpeg.org/download.html>)
-- step 2: download the archive where it says something like 2PACMPEG_WINDOWS_x64 from <https://github.com/onniro/2PACMPEG/releases>
-- step 3: unpack the archive somewhere
-- step 4: go to the containing folder of 2PACMPEG.EXE
-- step 5: make a folder there with the name ffmpeg
-- step 6: put ffmpeg.exe and ffprobe.exe into the aforementioned folder
+- step 1: get copies of ffmpeg.exe and ffprobe.exe (<https://www.ffmpeg.org/download.html>)
+- step 2: download 2PACMPEG.EXE from <https://github.com/onniro/2PACMPEG/releases>
+- step 3: go to the containing folder of 2PACMPEG.EXE
+- step 4: make a folder there with the name ffmpeg
+- step 5: put ffmpeg.exe and ffprobe.exe into the that folder
 
 ## 1.2. Linux
 - step 1: get ffmpeg and ffprobe from your package manager
@@ -35,7 +34,7 @@ _pac was tha meanin of lyfe..._
 # 3. building
 
 ## 3.1. tools
-- clang++ (with windows-specific headers and libs included if on windows)
+- clang++ (with windows headers and libs included if building for windows)
 
 ## 3.2. dependencies 
 - ImGui (included)
@@ -43,12 +42,11 @@ _pac was tha meanin of lyfe..._
 
 ## 3.3. actually building
 - append containing folder of clang++ to PATH shell environment variable if it's not already there
-- on windows, run clang_release.bat in its containing folder and clang_release.sh on linux
+- on windows, run clang_release.bat and clang_release.sh on linux
 - (for debug, run compile_imgui.bat/sh **once** and then build with build.bat/sh)
 
 # 4. credits 
 - thanks to mastermind graphix designer Karkagami for the icon(s) <3
 - GLFW3 - window creation and rendering backend for ImGui
 - ImGui - gui toolkit
-- (most importantly) FFmpeg 
-
+- (most importantly) FFmpeg
