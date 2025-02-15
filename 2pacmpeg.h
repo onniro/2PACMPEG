@@ -3,8 +3,7 @@
 
 #define _2PACMPEG_VERSION_MAJOR (2)
 #define _2PACMPEG_VERSION_MINOR (4)
-#define _2PACMPEG_VERSION_PATCH (2)
-#define _2PACMPEG_BUILD_MODE    (_2PACMPEG_RELEASE) //(0 if debug build, 1 if release build)
+#define _2PACMPEG_VERSION_PATCH (3)
 
 #define PMEMORY_AMT MEGABYTES(7)
 
@@ -102,7 +101,12 @@ struct preset_table {
 struct platform_thread_info;
 
 //(forward declarations)
-
+void get_version_string(char *ptr2string);
+INTERNAL void show_version(void);
+INTERNAL void show_help(void);
+INTERNAL void show_license(void);
+INTERNAL bool8 process_args_basic(int arg_count, char **args);
+INTERNAL void process_args_gui(runtime_vars *rt_vars, int arg_count, char **args);
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
 INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars);
 INTERNAL void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list);
