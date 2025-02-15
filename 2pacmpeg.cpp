@@ -1,26 +1,23 @@
 
 /*
-FIXME: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
-TODO: warnings for if ffmpeg or ffprobe isn't found on the system
+TODO: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
 */
 
 #include "thangz.h"
 #include "2pacmpeg.h"
+#include "imgui_internal.h" //only for calling SetShortcutRouting() to unbind ctrl+tab
 
-INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars) {
-    ImGuiIO &im_io = ImGui::GetIO();
-    //has to be static otherwise it will crash in AddFontFromFileTTF()
-    //due to the buffer mysteriously disappearing apparently
-    LOCAL_STATIC ImVector<ImWchar> glyph_ranges_buffer;
-    ImFontGlyphRangesBuilder ranges_builder;
-    ranges_builder.AddRanges(im_io.Fonts->GetGlyphRangesDefault());
-    ranges_builder.AddRanges(im_io.Fonts->GetGlyphRangesCyrillic());
-    //TODO: maybe add more glyphs
-    ranges_builder.BuildRanges(&glyph_ranges_buffer);
-    rt_vars->default_font = im_io.Fonts->AddFontFromFileTTF(font2load,
-                                font_size, 
-                                0, 
-                                glyph_ranges_buffer.Data);
+void get_version_string(char *ptr2string) {
+    char buildmode[32];
+    if(_2PACMPEG_BUILD_MODE) 
+    { strcpy(buildmode, "release"); } 
+    else 
+    { strcpy(buildmode, "debug"); }
+    sprintf(ptr2string, "%s v%u.%u.%u",
+            buildmode,
+            _2PACMPEG_VERSION_MAJOR,
+            _2PACMPEG_VERSION_MINOR,
+            _2PACMPEG_VERSION_PATCH);
 }
 
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) {
@@ -33,11 +30,83 @@ inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) {
     return result;
 }
 
+INTERNAL char process_args_basic(int arg_count, char **args) {
+    char should_exit = false;
+    if(arg_count > 1) {
+        for(int arg_index = 1; arg_index < arg_count; ++arg_index) {
+            if(!strcmp("--", args[arg_index])) 
+            { break; } 
+            else if(!strcmp("-v", args[arg_index])) {
+                should_exit = true;
+                char ver_buffer[64];
+                strcpy(ver_buffer, "2PACMPEG ");
+                get_version_string(ver_buffer + strlen(ver_buffer));
+                printf("%s\n", ver_buffer);
+                break;
+            } else if(!strcmp("-h", args[arg_index])) {
+                should_exit = true;
+                printf("basic arguments:\n"
+                    "-h -> print this message and exit\n"
+                    "-v -> print version and exit\n"
+                    "user interface related arguments:\n"
+                    "-bitmapfont -> do not attempt to load a vector font and resort to the ImGui bitmap font\n"
+                    "-fontsize <number> -> set size for the vector font in place of <number> (default size: %.1f)\n",
+                    DEFAULT_FONT_SIZE);
+                break;
+            } else {
+                should_exit = true;
+                printf("unrecognized option %s\nuse -h to show help.\nexiting\n", args[arg_index]);
+                break;
+            }
+        }
+    }
+
+    return should_exit;
+}
+
+INTERNAL void process_args_gui(runtime_vars *rt_vars, int arg_count, char **args) {
+    bool8 fontsize_set = false, use_bmp_font = false;
+    float font_size = DEFAULT_FONT_SIZE;
+   
+    if(arg_count > 1) {
+        for(int arg_index = 1; arg_index < arg_count; ++arg_index) {
+            if(!use_bmp_font && !strcmp(args[arg_index], "-bitmapfont")) 
+            { use_bmp_font = true; } 
+            else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
+                if(args[arg_index + 1]) {
+                    font_size = strtof(args[arg_index + 1], 0);
+                    if(font_size == 0.0f) 
+                    { font_size = DEFAULT_FONT_SIZE; }
+                    fontsize_set = true;
+                }
+            }
+        }
+    }
+
+    if(!use_bmp_font) 
+    { platform_load_font(rt_vars, font_size); }
+}
+
+INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars) {
+    ImFontAtlas *im_io_fonts = ImGui::GetIO().Fonts;
+    //has to be static otherwise it will crash in AddFontFromFileTTF()
+    //due to the buffer mysteriously disappearing apparently
+    LOCAL_STATIC ImVector<ImWchar> glyph_ranges_buffer;
+    ImFontGlyphRangesBuilder ranges_builder;
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesDefault());
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesCyrillic());
+    //TODO: maybe add more glyphs
+    ranges_builder.BuildRanges(&glyph_ranges_buffer);
+    rt_vars->default_font = im_io_fonts->AddFontFromFileTTF(font2load,
+                                font_size, 
+                                0, 
+                                glyph_ranges_buffer.Data);
+}
+
 INTERNAL void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list) {
     LOCAL_STATIC text_buffer_group *tbuf_group = get_text_buffer_group_ptr(0);
-    if(tbuf_group) { 
-        strncpy(tbuf_group->input_path_buffer, path_list[0], PMEM_INPUTPATHBUFFERSIZE); 
-    }
+    if(tbuf_group) 
+    { strncpy(tbuf_group->input_path_buffer, path_list[0], PMEM_INPUTPATHBUFFERSIZE); }
 }
 
 INTERNAL text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group) {
@@ -58,7 +127,8 @@ INTERNAL last_diagnostic_type log_diagnostic(s8 *message,
         strncpy(tbuf_group->diagnostic_buffer, message, PMEM_DIAGNOSTICBUFFERSIZE);
         tbuf_group->diagnostic_buffer[strlen(tbuf_group->diagnostic_buffer)] = 0x0;
     }
-    if(type != undefined) {last_diagnostic = type;}
+    if(type != undefined) 
+    { last_diagnostic = type; }
     return last_diagnostic;
 }
 
@@ -83,9 +153,8 @@ INTERNAL void show_diagnostic(text_buffer_group *tbuf_group) {
     ImVec2 text_dimensions = ImGui::CalcTextSize(tbuf_group->diagnostic_buffer);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (text_dimensions.y/2.0f));
     ImGui::Text(tbuf_group->diagnostic_buffer);
-    if(tbuf_group->diagnostic_buffer[0]) { 
-        ImGui::PopStyleColor(); 
-    }
+    if(tbuf_group->diagnostic_buffer[0]) 
+    { ImGui::PopStyleColor(); }
 }
 
 INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table) {
@@ -172,15 +241,13 @@ inline void adjust_pointer_table(preset_table *p_table,
         if(!move_index) {
             p_table->command_table[0] = strchr(tbuf_group->config_buffer, TOKEN_PRESETCMD);
 
-            if(p_table->command_table[0]) { 
-                p_table->command_table[0] += 1; 
-            }
+            if(p_table->command_table[0]) 
+            { p_table->command_table[0] += 1; }
         } else {
             p_table->command_table[move_index] = strchr(p_table->command_table[move_index - 1], TOKEN_PRESETCMD);
 
-            if(p_table->command_table[move_index]) { 
-                p_table->command_table[move_index] += 1; 
-            }
+            if(p_table->command_table[move_index]) 
+            { p_table->command_table[move_index] += 1; }
         }
     }
 }
@@ -287,11 +354,10 @@ inline void insert_preset_name(preset_table *p_table,
 inline int command_length(s8 *command_begin) {
     int result = -1;
     s8 *command_end = strchr(command_begin, (s8)'\n');
-    if(!command_end) { 
-        s8 *command_end = strchr(command_begin, (s8)'\0'); 
-    } if(command_end) { 
-        result = command_end - command_begin; 
-    }
+    if(!command_end) 
+    { s8 *command_end = strchr(command_begin, (s8)'\0'); } 
+    if(command_end) 
+    { result = command_end - command_begin; }
     return result;
 }
 
@@ -365,9 +431,8 @@ INTERNAL void remove_preset(preset_table *p_table, text_buffer_group *tbuf_group
 // NOTE: sub-optimal?
 inline bool32 check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
     for(int name_index = 0; name_index < p_table->entry_amount; ++name_index) {
-        if(strcmp(p_name, p_table->name_array + (name_index * PRESETNAME_PITCH)) == 0) { 
-            return true; 
-        }
+        if(strcmp(p_name, p_table->name_array + (name_index * PRESETNAME_PITCH)) == 0) 
+        { return true; }
     }
     return false;
 }
@@ -376,12 +441,11 @@ inline void strip_end_filename(s8 *file_path) {
     int length = strlen(file_path);
     for(int char_index = length - 1; char_index >= 0; --char_index) {
 #if _2PACMPEG_WIN32
-        if(file_path[char_index] == '\\') {
+        if(file_path[char_index] == '\\')
 #elif _2PACMPEG_LINUX
-        if(file_path[char_index] == '/') {
+        if(file_path[char_index] == '/') 
 #endif
-            break; 
-        }
+        { break; }
         file_path[char_index] = 0;
     }
 }
@@ -661,8 +725,7 @@ INTERNAL void menu_start_ffmpeg(text_buffer_group *tbuf_group,
             platform_ffmpeg_execute_command(tbuf_group,
                                             thread_info,
                                             rt_vars);
-        } 
-        else { 
+        } else { 
             log_diagnostic("no input file specified.", last_diagnostic_type::error, tbuf_group); 
         }
     } else { 
@@ -719,20 +782,17 @@ INTERNAL void basic_controls_update(text_buffer_group *tbuf_group,
                     PMEM_INPUTPATHBUFFERSIZE);
 #endif
 
-    if(ImGui::Button("toggle argument options##arg_options")) { 
-        arg_options_visible = ~arg_options_visible; 
-    }
+    if(ImGui::Button("toggle argument options##arg_options")) 
+    { arg_options_visible = ~arg_options_visible; }
 
-    if(arg_options_visible) { 
-        argument_options(tbuf_group, rt_vars, thread_info, target_filesize_buffer, bitrate_buffer); 
-    }
+    if(arg_options_visible) 
+    { argument_options(tbuf_group, rt_vars, thread_info, target_filesize_buffer, bitrate_buffer); }
 
     ImGui::Text("args for FFmpeg:");
     ImGui::InputText("##ffmpeg_args", tbuf_group->user_cmd_buffer, PMEM_USRCOMMANDBUFFERSIZE);
 
-    if(ImGui::Button("add current args to presets")) { 
-        add_args_to_presets(tbuf_group, p_table, preset_name_buffer); 
-    }
+    if(ImGui::Button("add current args to presets")) 
+    { add_args_to_presets(tbuf_group, p_table, preset_name_buffer); }
 
     ImGui::SameLine();
     ImGui::Text("preset name ->");
@@ -803,9 +863,8 @@ INTERNAL void basic_controls_update(text_buffer_group *tbuf_group,
         tbuf_group->diagnostic_buffer[0] = 0x0;
     }
 
-    if(ImGui::Button("start FFmpeg")) { 
-        menu_start_ffmpeg(tbuf_group, rt_vars, thread_info); 
-    }
+    if(ImGui::Button("start FFmpeg")) 
+    { menu_start_ffmpeg(tbuf_group, rt_vars, thread_info); }
     ImGui::SameLine();
     if(ImGui::Button("clear output##clear_output")) {
 #if 0
@@ -881,9 +940,8 @@ INTERNAL void preset_list_update(text_buffer_group *tbuf_group,
         } if(ImGui::BeginPopupContextItem(p_table->name_array + 
                 (preset_index * PRESETNAME_PITCH))) {
             // TODO: change the names
-            if(ImGui::Button("remove")) { 
-                remove_preset(p_table, tbuf_group, preset_index); 
-            }
+            if(ImGui::Button("remove")) 
+            { remove_preset(p_table, tbuf_group, preset_index); }
             ImGui::EndPopup();
         }
     }

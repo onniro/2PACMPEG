@@ -19,7 +19,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "imgui_internal.h"
+#include "imgui_internal.h" //only for calling SetShortcutRouting() to unbind ctrl+tab
 
 #define GLFW_EXPOSE_NATIVE_X11
 #include "GLFW/glfw3.h"
@@ -73,9 +73,7 @@ extern void *platform_thread_read_proc_stdout(void *args_voidptr) {
             bytes_read = read(thread_args->_thread_info->file_descriptor,
                             line_buffer,
                             PMEM_STDOUTLINEBUFFERSIZE - 1);
-            if(!bytes_read) { 
-                break; 
-            }
+            if(!bytes_read) {break;}
             stdout_buffer_bytes += bytes_read;
             if(stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
                 full_buffer[0] = 0x0;
@@ -110,9 +108,8 @@ extern void *platform_thread_read_proc_stdout(void *args_voidptr) {
     }
 
     waitpid(thread_args->_thread_info->proc_id, 0, 0);
-    if(fcntl(thread_args->_thread_info->file_descriptor, F_GETFD) != -1) { 
-        close(thread_args->_thread_info->file_descriptor); 
-    }
+    if(fcntl(thread_args->_thread_info->file_descriptor, F_GETFD) != -1) 
+    { close(thread_args->_thread_info->file_descriptor); }
     thread_args->_rt_vars->ffmpeg_is_running = false;
     pthread_exit(EXIT_SUCCESS);
 }
@@ -120,13 +117,12 @@ extern void *platform_thread_read_proc_stdout(void *args_voidptr) {
 INTERNAL bool32 platform_kill_process(platform_thread_info *thread_info) {
     bool32 result = false;
     //pid + 1 works lmao?
-    if(-1 != kill(thread_info->proc_id + 1, SIGKILL)) { 
-        result = true; 
-    } else {
+    if(-1 != kill(thread_info->proc_id + 1, SIGKILL)) 
+    { result = true; } 
 #if _2PACMPEG_DEBUG
-        printf("errno=%i:%s\n", errno, strerror(errno)); 
+    else 
+    { printf("errno=%i:%s\n", errno, strerror(errno)); }
 #endif
-    }
     return result;
 }
 
@@ -165,11 +161,10 @@ INTERNAL char *platform_get_working_directory(char *destination, uint32_t buffer
     size_t bytes_read = readlink("/proc/self/exe", destination, buffer_size);
     destination[bytes_read] = 0x0;
     for(int char_index = (int)bytes_read; char_index >= 0; --char_index) {
-        if(destination[char_index] != '/') { 
-            destination[char_index] = 0x0; 
-        } else { 
-            break; 
-        }
+        if(destination[char_index] != '/') 
+        { destination[char_index] = 0x0; }
+        else 
+        { break; }
     }
     return destination;
 }
@@ -177,18 +172,16 @@ INTERNAL char *platform_get_working_directory(char *destination, uint32_t buffer
 inline bool32 platform_file_exists(char *file_path) {
     bool32 result = false;
     struct stat stat_struct;
-    if(!stat(file_path, &stat_struct)) { 
-        result = true; 
-    }
+    if(!stat(file_path, &stat_struct)) 
+    { result = true; }
     return result;
 }
 
 inline bool32 platform_directory_exists(char *directory_name) {
     bool32 result = false;
     struct stat stat_struct;
-    if(!stat(directory_name, &stat_struct) && S_ISDIR(stat_struct.st_mode)) { 
-        result = true; 
-    }
+    if(!stat(directory_name, &stat_struct) && S_ISDIR(stat_struct.st_mode)) 
+    { result = true; }
     return result;
 }
 
@@ -202,7 +195,6 @@ INTERNAL bool32 platform_read_file(char *file_path, char *destination, u64 *dest
                         destination, 
                         stat_buf.st_size);
         result = (*dest_size == stat_buf.st_size);
-
         close(file_descriptor);
     }
     return result;
@@ -223,37 +215,19 @@ INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer
 INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
     char font2load[1024];
     font2load[0] = 0;
-    if(platform_file_exists("/usr/share/fonts/liberation/LiberationMono-Regular.ttf")) {
-        strncpy(font2load, "/usr/share/fonts/liberation/LiberationMono-Regular.ttf", 1024);
-    } else if(platform_file_exists("/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf")) {
-        strncpy(font2load, "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 1024);
-    }
+    if(platform_file_exists("/usr/share/fonts/liberation/LiberationMono-Regular.ttf")) 
+    { strncpy(font2load, "/usr/share/fonts/liberation/LiberationMono-Regular.ttf", 1024); } 
+    else if(platform_file_exists("/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf")) 
+    { strncpy(font2load, "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf", 1024); }
 
-    if(*font2load) {imgui_font_load_glyphs(font2load, font_size, rt_vars);}
-}
-
-INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args) {
-    bool8 fontsize_set = false, use_bmp_font = false;
-    float font_size = DEFAULT_FONT_SIZE;
-   
-    if(arg_count > 1) {
-        for(int arg_index = 0; arg_index < arg_count; ++arg_index) {
-            if(!use_bmp_font && !strcmp(args[arg_index], "-bitmapfont")) {
-                use_bmp_font = true;
-            } else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
-                if(args[arg_index + 1]) {
-                    font_size = strtof(args[arg_index + 1], 0);
-                    if(font_size == 0.0f) {font_size = DEFAULT_FONT_SIZE;}
-                    fontsize_set = true;
-                }
-            }
-        }
-    }
-
-    if(!use_bmp_font) {platform_load_font(rt_vars, font_size);}
+    if(*font2load) 
+    { imgui_font_load_glyphs(font2load, font_size, rt_vars); }
 }
 
 int main(int arg_count, char **args) {
+    if(process_args_basic(arg_count, args)) 
+    { return 0; }
+
     if(!glfwInit()) {
         fprintf(stderr, "glfwInit failed.\n");
         return -1;
@@ -299,9 +273,8 @@ int main(int arg_count, char **args) {
     program_memory p_memory = {0};
     platform_make_heap_buffer(&p_memory, PMEMORY_AMT);
 
-    if(!p_memory.memory) { 
-        return -1; 
-    }
+    if(!p_memory.memory) 
+    { return -1; }
 
     text_buffer_group tbuf_group = {0};
     tbuf_group.input_path_buffer =      (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
@@ -316,9 +289,8 @@ int main(int arg_count, char **args) {
     tbuf_group.stdout_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
 
     //?? ok
-    if(tbuf_group.default_path_buffer) { 
-        tbuf_group.default_path_buffer[0] = 0x0; 
-    }
+    if(tbuf_group.default_path_buffer) 
+    { tbuf_group.default_path_buffer[0] = 0x0; }
 
     s8 _diagnostic_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
     s8 _ffprobe_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0}; 
@@ -344,7 +316,7 @@ int main(int arg_count, char **args) {
     p_table.command_table = (s8 **)heapbuf_alloc_region(&p_memory, MAX_PRESETS);
     load_startup_files(&tbuf_group, &p_table);
 
-    platform_process_args(&rt_vars, arg_count, args);
+    process_args_gui(&rt_vars, arg_count, args);
 
 #if _2PACMPEG_DEBUG
     printf("-- LOG START --\nmemory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\n", 
@@ -358,9 +330,7 @@ int main(int arg_count, char **args) {
     useconds_t us2sleep;
     while(!glfwWindowShouldClose(rt_vars.win_ptr)) {
         start_timestamp = posixapi_get_timestamp();
-
         update_window(&tbuf_group, &p_table, &rt_vars, &thread_info);
-
         end_timestamp = posixapi_get_timestamp();
         deltatime = end_timestamp - start_timestamp;
         
@@ -377,9 +347,8 @@ int main(int arg_count, char **args) {
     glfwDestroyWindow(rt_vars.win_ptr);
     glfwTerminate();
 
-    if(rt_vars.ffmpeg_is_running) { 
-        platform_kill_process(&thread_info); 
-    }
+    if(rt_vars.ffmpeg_is_running) 
+    { platform_kill_process(&thread_info); }
 
     return EXIT_SUCCESS;
 }

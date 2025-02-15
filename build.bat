@@ -8,7 +8,7 @@ set LINK_DIRS=-L ..\deps\GLFW\win32
 set OBJ_FILES=%CD%\imgui_o_files\*.o
 REM set LINK_LIBS=-static-libstdc++ -static -lunwind -lopengl32 -lgdi32 -lshell32 -lole32 -lglfw3 -luuid -lwinmm -lshlwapi
 set LINK_LIBS=-static-libstdc++ -static -lunwind -lopengl32 -lgdi32 -lshell32 -lole32 %CD%/deps/GLFW/win32/libglfw3.a -luuid -lwinmm -lshlwapi %OBJ_FILES%
-set MISC_FLAGS=-O2 -o 2PACMPEG.EXE -g -gcodeview --for-linker --pdb=2pacmpeg.pdb -Wl,/subsystem:windows,/opt:ref,/DEBUG:FULL
+set MISC_FLAGS=-O2 -o 2PACMPEG.EXE -g -gcodeview --for-linker --pdb=2pacmpeg.pdb -Wl,/subsystem:windows,/subsystem:console,/opt:ref,/DEBUG:FULL
 REM set MISC_FLAGS=-O2 -o 2PACMPEG.EXE -Wl,/subsystem:windows,/opt:ref
 set DEFINES=-D_2PACMPEG_WIN32=1 -D_2PACMPEG_DEBUG=1 -D_2PACMPEG_RELEASE=0 -D_NO_DEBUG_HEAP=1
 set WARNINGLEVEL=-Wno-parentheses -Wno-format -Wno-unicode-whitespace

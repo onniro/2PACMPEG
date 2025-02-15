@@ -16,7 +16,7 @@ struct linux_thread_args {
     program_enum *_prog_enum;
 };
 
-////////////////////
+//(forward declarations)
 
 INTERNAL void *platform_make_heap_buffer(program_memory *target, u64 pool_size);
 INTERNAL void platform_init_threading(platform_thread_info *thread_info);

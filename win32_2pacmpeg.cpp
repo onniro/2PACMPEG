@@ -15,7 +15,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "imgui_internal.h"
+#include "imgui_internal.h" //only for calling SetShortcutRouting() to unbind ctrl+tab
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include "GLFW/glfw3.h"
@@ -50,11 +50,11 @@ INTERNAL void platform_init_threading(platform_thread_info *thread_info) {
         thread_info->cmd_stream_startupinfo.hStdInput = INVALID_HANDLE_VALUE;
         thread_info->cmd_stream_startupinfo.hStdOutput = thread_info->write_handle;
         thread_info->cmd_stream_startupinfo.hStdError = thread_info->write_handle;
-    } else {
+    } 
 #if _2PACMPEG_DEBUG
-        OutputDebugStringA("[error]: CreatePipe failed.\n");
+    else 
+    { OutputDebugStringA("[error]: CreatePipe failed.\n"); }
 #endif
-    }
 }
 
 DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
@@ -80,7 +80,7 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
                 strncat(thread_args->_tbuf_group->stdout_buffer,
                         thread_args->_tbuf_group->stdout_line_buffer, 
                         PMEM_STDOUTBUFFERSIZE - stdout_buffer_bytes - 1);
-            } else {break;}
+            } else { break; }
         }
     } break;
 
@@ -96,7 +96,7 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
 
                 strncat(thread_args->_tbuf_group->ffprobe_buffer,
                         temp_buffer, PMEM_DIAGNOSTICBUFFERSIZE);
-            } else {break;}
+            } else { break; }
         }
     } break;
 
@@ -119,9 +119,8 @@ DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr) {
                                                         platform_thread_read_stdout,
                                                         thread_args_voidptr, 0, 0);
 #if _2PACMPEG_DEBUG
-    if(thread_args->_thread_info->stdio_thread_handle == INVALID_HANDLE_VALUE) { 
-        OutputDebugStringA("[error]: thread received invalid handle.\n"); 
-    }
+    if(thread_args->_thread_info->stdio_thread_handle == INVALID_HANDLE_VALUE) 
+    { OutputDebugStringA("[error]: thread received invalid handle.\n"); }
 #endif
 
     if(CreateProcessA(0, thread_args->_tbuf_group->command_buffer,
@@ -163,9 +162,8 @@ DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr) {
 
 INTERNAL bool32 platform_kill_process(platform_thread_info *thread_info) {
     bool32 result = false;
-    if(TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, PROCESS_TERMINATE)) { 
-        result = true; 
-    }
+    if(TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, PROCESS_TERMINATE)) 
+    { result = true; }
 
     return result;
 }
@@ -234,22 +232,23 @@ INTERNAL s8 *platform_get_working_directory(s8 *destination, DWORD buffer_size) 
         result = destination;
         for(DWORD char_index = path_length - 1;
                 destination[char_index] != '\\';
-                --char_index) { 
-            destination[char_index] = '\0'; 
-        }
+                --char_index) 
+        { destination[char_index] = '\0'; }
     }
     return result;
 }
 
 inline bool32 platform_file_exists(s8 *file_path) {
     bool32 result = false;
-    if(PathFileExistsA(file_path)) {result = true;}
+    if(PathFileExistsA(file_path)) 
+    { result = true; }
     return result;
 }
 
 inline bool32 platform_directory_exists(s8 *directory_name) {
     bool32 result = false;
-    if(PathIsDirectoryA(directory_name)) {result = true;}
+    if(PathIsDirectoryA(directory_name)) 
+    { result = true; }
     return result;
 }
 
@@ -265,9 +264,8 @@ INTERNAL bool32 platform_read_file(s8 *file_path, s8 *destination, u64 *dest_siz
             *dest_size = file_size.QuadPart;
             DWORD bytes_read;
 
-            if(ReadFile(file_handle, destination, *dest_size, &bytes_read, 0)) { 
-                result = true; 
-            }
+            if(ReadFile(file_handle, destination, *dest_size, &bytes_read, 0)) 
+            { result = true; }
         } 
     } else {
 #if _2PACMPEG_DEBUG
@@ -290,9 +288,8 @@ INTERNAL bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_s
 
     if(file_handle != INVALID_HANDLE_VALUE) {
         DWORD bytes_written;
-        if(WriteFile(file_handle, in_buffer, buffer_size, &bytes_written, 0)) { 
-            result = true; 
-        }
+        if(WriteFile(file_handle, in_buffer, buffer_size, &bytes_written, 0)) 
+        { result = true; }
     } else {
 #if defined(_2PACMPEG_DEBUG)
         char err_buf[128];
@@ -308,11 +305,11 @@ INTERNAL bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_s
 INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
     char font2load[1024];
     font2load[0] = 0;
-    if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) {
-        strncpy(font2load, "C:\\Windows\\Fonts\\lucon.ttf", 1024);
-    }
+    if(platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) 
+    { strncpy(font2load, "C:\\Windows\\Fonts\\lucon.ttf", 1024); }
 
-    if(*font2load) {imgui_font_load_glyphs(font2load, font_size, rt_vars);}
+    if(*font2load) 
+    { imgui_font_load_glyphs(font2load, font_size, rt_vars); }
 }
 
 INTERNAL void check_ffmpeg_existence(text_buffer_group *tbuf_group) {
@@ -345,31 +342,13 @@ INTERNAL DWORD win32_get_deltatime_ms(LONGLONG start, LONGLONG end, LONGLONG per
     return result;
 }
 
-INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args) {
-    bool8 fontsize_set = false, use_bmp_font = false;
-    float font_size = DEFAULT_FONT_SIZE;
-   
-    if(arg_count > 1) {
-        for(int arg_index = 0; arg_index < arg_count; ++arg_index) {
-            if(!use_bmp_font && !strcmp(args[arg_index], "-bitmapfont")) {
-                use_bmp_font = true;
-            } else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
-                if(args[arg_index + 1]) {
-                    font_size = strtof(args[arg_index + 1], 0);
-                    if(font_size == 0.0f) {font_size = DEFAULT_FONT_SIZE;}
-                    fontsize_set = true;
-                }
-            }
-        }
-    }
-
-    if(!use_bmp_font) {platform_load_font(rt_vars, font_size);}
-}
-
 int __stdcall WinMain(HINSTANCE instance, 
                     HINSTANCE prev_instance, 
                     char *cmd_args, 
                     int show_cmd) {
+    if(process_args_basic(__argc, __argv)) 
+    { return EXIT_SUCCESS; }
+
 #define SCHEDULER_MS_RESOLUTION ((UINT)1)
     if(timeBeginPeriod(SCHEDULER_MS_RESOLUTION) == TIMERR_NOERROR) {
 #if _2PACMPEG_DEBUG
@@ -420,14 +399,13 @@ int __stdcall WinMain(HINSTANCE instance,
     ImGui_ImplGlfw_InitForOpenGL(rt_vars.win_ptr, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    platform_process_args(&rt_vars, __argc, __argv);
+    process_args_gui(&rt_vars, __argc, __argv);
 
     program_memory p_memory = {0};
     platform_make_heap_buffer(&p_memory, PMEMORY_AMT);
 
-    if(!p_memory.memory) { 
-        return -1; 
-    }
+    if(!p_memory.memory) 
+    { return -1; }
 
     text_buffer_group tbuf_group = {0};
     tbuf_group.input_path_buffer =      (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
@@ -442,9 +420,8 @@ int __stdcall WinMain(HINSTANCE instance,
     tbuf_group.wchar_input_buffer =     (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
 
     // ?? ok
-    if(tbuf_group.default_path_buffer) { 
-        tbuf_group.default_path_buffer[0] = 0x0; 
-    }
+    if(tbuf_group.default_path_buffer) 
+    { tbuf_group.default_path_buffer[0] = 0x0; }
 
     s8 _diagnostic_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
     s8 _ffprobe_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
@@ -513,9 +490,8 @@ int __stdcall WinMain(HINSTANCE instance,
     glfwDestroyWindow(rt_vars.win_ptr);
     glfwTerminate();
 
-    if(rt_vars.ffmpeg_is_running) { 
-        TerminateProcess(thread_info.cmd_stream_processinfo.hProcess, PROCESS_TERMINATE); 
-    }
+    if(rt_vars.ffmpeg_is_running) 
+    { TerminateProcess(thread_info.cmd_stream_processinfo.hProcess, PROCESS_TERMINATE); }
 
     return EXIT_SUCCESS;
 }

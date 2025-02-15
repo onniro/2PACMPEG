@@ -1,4 +1,9 @@
 
+/*
+NOTE: win32_thread_args and the linux equivalent are the same thing
+but im too lazy to change this stuff lmaoo
+*/
+
 #if !defined(WIN32_2PACMPEG_DOT_H)
 
 #if _2PACMPEG_RELEASE
@@ -25,7 +30,7 @@ struct win32_thread_args {
     program_enum *_prog_enum;
 };
 
-//////////////////////
+//(forward declarations)
 
 INTERNAL void *platform_make_heap_buffer(program_memory *target, u64 pool_size);
 INTERNAL void platform_init_threading(platform_thread_info *thread_info);

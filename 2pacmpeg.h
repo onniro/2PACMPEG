@@ -1,6 +1,11 @@
 
 #if !defined(_2PACMPEG_DOT_H)
 
+#define _2PACMPEG_VERSION_MAJOR (2)
+#define _2PACMPEG_VERSION_MINOR (4)
+#define _2PACMPEG_VERSION_PATCH (2)
+#define _2PACMPEG_BUILD_MODE    (_2PACMPEG_RELEASE) //(0 if debug build, 1 if release build)
+
 #define PMEMORY_AMT MEGABYTES(7)
 
 //lol
@@ -28,9 +33,9 @@
 
 #define STDOUT_BUFFER_RESET_THRESHOLD (PMEM_STDOUTBUFFERSIZE - KILOBYTES(5))
 
-#define TOKEN_OUTPUTDIR (char)0xAA
-#define TOKEN_PRESETNAME (char)0xAC
-#define TOKEN_PRESETCMD (char)0xAF
+#define TOKEN_OUTPUTDIR     (char)0xAA
+#define TOKEN_PRESETNAME    (char)0xAC
+#define TOKEN_PRESETCMD     (char)0xAF
 
 #if _2PACMPEG_LINUX
     #define MAX_FRAMETIME_MICROSECONDS ((useconds_t)16667)
@@ -96,9 +101,10 @@ struct preset_table {
 
 struct platform_thread_info;
 
-//////////////////////
+//(forward declarations)
 
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
+INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars);
 INTERNAL void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list);
 INTERNAL text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group);
 INTERNAL last_diagnostic_type log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);

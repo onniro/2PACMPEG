@@ -1,4 +1,5 @@
 #!/bin/bash
+echo '\033[1;33mNOTE: make sure to update version macros in 2pacmpeg.h before releasing 4real!\033[0m\n'
 
 WORKDIR="$PWD/release_linux"
 SOURCES="$PWD/deps/imgui/imgui*.cpp $PWD/linux_2pacmpeg.cpp"
