@@ -5,53 +5,59 @@ TODO: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
 
 #include "thangz.h"
 #include "2pacmpeg.h"
-#include "imgui_internal.h" //only for calling SetShortcutRouting() to unbind ctrl+tab
 
-void get_version_string(char *ptr2string) {
-    char buildmode[32];
-    if(_2PACMPEG_BUILD_MODE) 
-    { strcpy(buildmode, "release"); } 
-    else 
-    { strcpy(buildmode, "debug"); }
-    sprintf(ptr2string, "%s v%u.%u.%u",
-            buildmode,
+INTERNAL void show_version(void) {
+    char ver_buffer[128];
+#if _2PACMPEG_RELEASE
+    strcpy(ver_buffer, "2PACMPEG (release)");
+#else 
+    strcpy(ver_buffer, "2PACMPEG (debug)");
+#endif
+    sprintf(ver_buffer + strlen(ver_buffer), 
+            " v%u.%u.%u, compiled %s @ %s\n",
             _2PACMPEG_VERSION_MAJOR,
             _2PACMPEG_VERSION_MINOR,
-            _2PACMPEG_VERSION_PATCH);
+            _2PACMPEG_VERSION_PATCH,
+            __DATE__,
+            __TIME__);
+    printf("%s", ver_buffer);
 }
 
-inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) {
-    void *result = 0;
-    u64 free_memory = ((u64)pool->memory + pool->capacity) - (u64)pool->write_ptr;
-    if(region_size <= free_memory) {
-        result = pool->write_ptr;
-        pool->write_ptr = (void *)((u64)pool->write_ptr + region_size);
-    }
-    return result;
+INTERNAL void show_help(void) {
+    printf("usage: 2pacmpeg [options]\n"
+        "basic arguments:\n"
+        "-h -> print this message and exit\n"
+        "-v -> print version and exit\n"
+        "-L -> print license and exit\n"
+        "user interface related arguments:\n"
+        "-bitmapfont -> do not attempt to load a vector font and resort to the ImGui bitmap font\n"
+        "-fontsize <number> -> set size for the vector font in place of <number> (default size: %.1f)\n",
+        DEFAULT_FONT_SIZE);
 }
 
-INTERNAL char process_args_basic(int arg_count, char **args) {
-    char should_exit = false;
+INTERNAL void show_license(void) {
+    printf("DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE\n"
+        "TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION\n"
+        "0. You just DO WHAT THE FUCK YOU WANT TO.\n");
+}
+
+INTERNAL bool8 process_args_basic(int arg_count, char **args) {
+    bool8 should_exit = false;
     if(arg_count > 1) {
         for(int arg_index = 1; arg_index < arg_count; ++arg_index) {
-            if(!strcmp("--", args[arg_index])) 
-            { break; } 
-            else if(!strcmp("-v", args[arg_index])) {
+            if(!strcmp("--", args[arg_index])) { 
+                break; 
+            } else if(!strcmp("-v", args[arg_index])) {
                 should_exit = true;
-                char ver_buffer[64];
-                strcpy(ver_buffer, "2PACMPEG ");
-                get_version_string(ver_buffer + strlen(ver_buffer));
-                printf("%s\n", ver_buffer);
+                show_version();
                 break;
             } else if(!strcmp("-h", args[arg_index])) {
                 should_exit = true;
-                printf("basic arguments:\n"
-                    "-h -> print this message and exit\n"
-                    "-v -> print version and exit\n"
-                    "user interface related arguments:\n"
-                    "-bitmapfont -> do not attempt to load a vector font and resort to the ImGui bitmap font\n"
-                    "-fontsize <number> -> set size for the vector font in place of <number> (default size: %.1f)\n",
-                    DEFAULT_FONT_SIZE);
+                show_help();
+                break;
+            } else if(!strcmp("-L", args[arg_index])) {
+                should_exit = true;
+                show_license();
                 break;
             } else {
                 should_exit = true;
@@ -87,15 +93,32 @@ INTERNAL void process_args_gui(runtime_vars *rt_vars, int arg_count, char **args
     { platform_load_font(rt_vars, font_size); }
 }
 
+inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) {
+    void *result = 0;
+    u64 free_memory = ((u64)pool->memory + pool->capacity) - (u64)pool->write_ptr;
+    if(region_size <= free_memory) {
+        result = pool->write_ptr;
+        pool->write_ptr = (void *)((u64)pool->write_ptr + region_size);
+    }
+    return result;
+}
+
 INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars) {
     ImFontAtlas *im_io_fonts = ImGui::GetIO().Fonts;
     //has to be static otherwise it will crash in AddFontFromFileTTF()
     //due to the buffer mysteriously disappearing apparently
     LOCAL_STATIC ImVector<ImWchar> glyph_ranges_buffer;
     ImFontGlyphRangesBuilder ranges_builder;
+
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesDefault());
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesCyrillic());
-    //TODO: maybe add more glyphs
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesGreek());
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesJapanese());
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesKorean());
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesChineseSimplifiedCommon());
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesThai());
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesVietnamese());
+
     ranges_builder.BuildRanges(&glyph_ranges_buffer);
     rt_vars->default_font = im_io_fonts->AddFontFromFileTTF(font2load,
                                 font_size, 
