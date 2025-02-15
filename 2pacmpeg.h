@@ -3,7 +3,7 @@
 
 #define _2PACMPEG_VERSION_MAJOR (2)
 #define _2PACMPEG_VERSION_MINOR (4)
-#define _2PACMPEG_VERSION_PATCH (3)
+#define _2PACMPEG_VERSION_PATCH (4)
 
 #define PMEMORY_AMT MEGABYTES(7)
 
@@ -101,18 +101,17 @@ struct preset_table {
 struct platform_thread_info;
 
 //(forward declarations)
-void get_version_string(char *ptr2string);
 INTERNAL void show_version(void);
 INTERNAL void show_help(void);
 INTERNAL void show_license(void);
 INTERNAL bool8 process_args_basic(int arg_count, char **args);
 INTERNAL void process_args_gui(runtime_vars *rt_vars, int arg_count, char **args);
+INTERNAL void get_window_title(char *title);
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
 INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars);
 INTERNAL void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list);
 INTERNAL text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group);
 INTERNAL last_diagnostic_type log_diagnostic(s8 *message, last_diagnostic_type type, text_buffer_group *tbuf_group);
-//INTERNAL void show_diagnostic(text_buffer_group *tbuf_group, runtime_vars *rtvars);
 INTERNAL void show_diagnostic(text_buffer_group *tbuf_group);
 INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table);
 inline void adjust_pointer_table(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index, int subtract_from_ceil);
