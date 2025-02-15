@@ -115,7 +115,14 @@ INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_v
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesGreek());
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesJapanese());
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesKorean());
+
+#if _2PACMPEG_ENABLE_CHINESE_SIMPLIFIED
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesChineseSimplifiedCommon());
+#endif
+#if _2PACMPEG_ENABLE_CHINESE_FULL
+    ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesChineseFull());
+#endif
+
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesThai());
     ranges_builder.AddRanges(im_io_fonts->GetGlyphRangesVietnamese());
 
