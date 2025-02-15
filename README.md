@@ -13,7 +13,7 @@ _pac wuz tha meanin of lyfe..._
 - step 2: download 2PACMPEG.EXE from <https://github.com/onniro/2PACMPEG/releases>
 - step 3: go to the containing folder of 2PACMPEG.EXE
 - step 4: make a folder there with the name ffmpeg
-- step 5: put ffmpeg.exe and ffprobe.exe into the that folder
+- step 5: put ffmpeg.exe and ffprobe.exe into that folder
 
 ## 1.2. Linux
 - step 1: get ffmpeg and ffprobe from your package manager
