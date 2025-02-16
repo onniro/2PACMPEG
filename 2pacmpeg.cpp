@@ -79,6 +79,7 @@ INTERNAL bool8 process_options(cmd_gui_options *gui_opts, int arg_count, char **
             } else {
                 should_exit = true;
                 printf("unrecognized option %s\nuse -h to get help.\nexiting\n", args[arg_index]);
+                break;
             }
         }
     }
