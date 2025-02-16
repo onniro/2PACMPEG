@@ -3,7 +3,7 @@
 
 #define _2PACMPEG_VERSION_MAJOR (2)
 #define _2PACMPEG_VERSION_MINOR (4)
-#define _2PACMPEG_VERSION_PATCH (4)
+#define _2PACMPEG_VERSION_PATCH (5)
 
 #define PMEMORY_AMT MEGABYTES(7)
 
@@ -98,14 +98,21 @@ struct preset_table {
     s8 *name_array;
 };
 
-struct platform_thread_info;
+struct cmd_gui_options {
+    bool8 use_bmp_font;
+    float font_size;
+};
 
 //(forward declarations)
+
+struct platform_thread_info;
+
+INTERNAL char *get_version_string(char *ptr2buf);
 INTERNAL void show_version(void);
 INTERNAL void show_help(void);
 INTERNAL void show_license(void);
-INTERNAL bool8 process_args_basic(int arg_count, char **args);
-INTERNAL void process_args_gui(runtime_vars *rt_vars, int arg_count, char **args);
+INTERNAL bool8 process_options(cmd_gui_options *gui_opts, int arg_count, char **args);
+INTERNAL void handle_gui_options(cmd_gui_options *gui_opts, runtime_vars *rt_vars);
 INTERNAL void get_window_title(char *title);
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
 INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars);
