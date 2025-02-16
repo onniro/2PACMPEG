@@ -1,9 +1,4 @@
 
-/*
-NOTE: win32_thread_args and the linux equivalent are the same thing
-but im too lazy to change this stuff lmaoo
-*/
-
 #if !defined(WIN32_2PACMPEG_DOT_H)
 
 #if _2PACMPEG_RELEASE
