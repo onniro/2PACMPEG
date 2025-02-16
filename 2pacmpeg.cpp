@@ -6,20 +6,25 @@ TODO: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
 #include "thangz.h"
 #include "2pacmpeg.h"
 
+INTERNAL char *get_version_string(char *ptr2buf) {
+    sprintf(ptr2buf, "v%u.%u.%u",
+        _2PACMPEG_VERSION_MAJOR,
+        _2PACMPEG_VERSION_MINOR,
+        _2PACMPEG_VERSION_PATCH);
+    return ptr2buf;
+}
+
 INTERNAL void show_version(void) {
     char ver_buffer[128];
 #if _2PACMPEG_RELEASE
-    strcpy(ver_buffer, "2PACMPEG (release)");
+    strcpy(ver_buffer, "2PACMPEG (release) ");
 #else 
-    strcpy(ver_buffer, "2PACMPEG (debug)");
+    strcpy(ver_buffer, "2PACMPEG (debug) ");
 #endif
+    get_version_string(ver_buffer + strlen(ver_buffer));
     sprintf(ver_buffer + strlen(ver_buffer), 
-            " v%u.%u.%u, compiled %s @ %s\n",
-            _2PACMPEG_VERSION_MAJOR,
-            _2PACMPEG_VERSION_MINOR,
-            _2PACMPEG_VERSION_PATCH,
-            __DATE__,
-            __TIME__);
+            ", compiled %s @ %s\n",
+            __DATE__, __TIME__);
     printf("%s", ver_buffer);
 }
 
@@ -41,8 +46,10 @@ INTERNAL void show_license(void) {
         "0. You just DO WHAT THE FUCK YOU WANT TO.\n");
 }
 
-INTERNAL bool8 process_args_basic(int arg_count, char **args) {
-    bool8 should_exit = false;
+INTERNAL bool8 process_options(cmd_gui_options *gui_opts, int arg_count, char **args) {
+    bool8 should_exit = false, fontsize_set = false;
+    gui_opts->font_size = DEFAULT_FONT_SIZE;
+
     if(arg_count > 1) {
         for(int arg_index = 1; arg_index < arg_count; ++arg_index) {
             if(!strcmp("--", args[arg_index])) { 
@@ -59,10 +66,19 @@ INTERNAL bool8 process_args_basic(int arg_count, char **args) {
                 should_exit = true;
                 show_license();
                 break;
+            } else if(!gui_opts->use_bmp_font && !strcmp(args[arg_index], "-bitmapfont")) {
+                gui_opts->use_bmp_font = true;
+            } else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
+                if(args[arg_index + 1]) {
+                    gui_opts->font_size = strtof(args[arg_index + 1], 0);
+                    if(gui_opts->font_size == 0.0f) 
+                    { gui_opts->font_size = DEFAULT_FONT_SIZE; }
+                    fontsize_set = true;
+                    ++arg_index;
+                }
             } else {
                 should_exit = true;
-                printf("unrecognized option %s\nuse -h to show help.\nexiting\n", args[arg_index]);
-                break;
+                printf("unrecognized option %s\nuse -h to get help.\nexiting\n", args[arg_index]);
             }
         }
     }
@@ -70,43 +86,19 @@ INTERNAL bool8 process_args_basic(int arg_count, char **args) {
     return should_exit;
 }
 
-INTERNAL void process_args_gui(runtime_vars *rt_vars, int arg_count, char **args) {
-    bool8 fontsize_set = false, use_bmp_font = false;
-    float font_size = DEFAULT_FONT_SIZE;
-   
-    if(arg_count > 1) {
-        for(int arg_index = 1; arg_index < arg_count; ++arg_index) {
-            if(!use_bmp_font && !strcmp(args[arg_index], "-bitmapfont")) 
-            { use_bmp_font = true; } 
-            else if(!fontsize_set && !strcmp(args[arg_index], "-fontsize")) {
-                if(args[arg_index + 1]) {
-                    font_size = strtof(args[arg_index + 1], 0);
-                    if(font_size == 0.0f) 
-                    { font_size = DEFAULT_FONT_SIZE; }
-                    fontsize_set = true;
-                }
-            }
-        }
-    }
-
-    if(!use_bmp_font) 
-    { platform_load_font(rt_vars, font_size); }
+INTERNAL void handle_gui_options(cmd_gui_options *gui_opts, runtime_vars *rt_vars) {
+    if(!gui_opts->use_bmp_font)
+    { platform_load_font(rt_vars, gui_opts->font_size); }
 }
 
 INTERNAL void get_window_title(char *title) {
 #if _2PACMPEG_DEBUG
-    sprintf(title, 
-            "(debug) 2PACMPEG v%u.%u.%u - 2PAC 4 LYFE (Definitive Edition)",
-            _2PACMPEG_VERSION_MAJOR,
-            _2PACMPEG_VERSION_MINOR,
-            _2PACMPEG_VERSION_PATCH);
+    strcpy(title, "(debug) 2PACMPEG ");
 #else
-    sprintf(title, 
-            "2PACMPEG v%u.%u.%u - 2PAC 4 LYFE (Definitive Edition)",
-            _2PACMPEG_VERSION_MAJOR,
-            _2PACMPEG_VERSION_MINOR,
-            _2PACMPEG_VERSION_PATCH);
+    strcpy(title, "2PACMPEG ");
 #endif
+    get_version_string(title + strlen(title));
+    strcat(title, " - 2PAC 4 LYFE (Definitive Edition)");
 }
 
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) {
@@ -766,9 +758,7 @@ INTERNAL void menu_start_ffmpeg(text_buffer_group *tbuf_group,
 #endif
             }
             thread_info->prog_enum = ffmpeg;
-            platform_ffmpeg_execute_command(tbuf_group,
-                                            thread_info,
-                                            rt_vars);
+            platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars);
         } else { 
             log_diagnostic("no input file specified.", last_diagnostic_type::error, tbuf_group); 
         }

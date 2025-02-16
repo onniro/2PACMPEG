@@ -346,7 +346,8 @@ int __stdcall WinMain(HINSTANCE instance,
                     HINSTANCE prev_instance, 
                     char *cmd_args, 
                     int show_cmd) {
-    if(process_args_basic(__argc, __argv)) 
+    cmd_gui_options gui_opts = {0};
+    if(process_options(&gui_opts, __argc, __argv)) 
     { return EXIT_SUCCESS; }
 
 #define SCHEDULER_MS_RESOLUTION ((UINT)1)
@@ -395,7 +396,8 @@ int __stdcall WinMain(HINSTANCE instance,
     ImGui_ImplGlfw_InitForOpenGL(rt_vars.win_ptr, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    process_args_gui(&rt_vars, __argc, __argv);
+    //process_args_gui(&rt_vars, __argc, __argv);
+    handle_gui_options(&gui_opts, &rt_vars);
 
     program_memory p_memory = {0};
     platform_make_heap_buffer(&p_memory, PMEMORY_AMT);

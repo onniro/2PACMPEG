@@ -225,7 +225,8 @@ INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) {
 }
 
 int main(int arg_count, char **args) {
-    if(process_args_basic(arg_count, args)) 
+    cmd_gui_options gui_opts = {0};
+    if(process_options(&gui_opts, arg_count, args)) 
     { return 0; }
 
     if(!glfwInit()) {
@@ -311,7 +312,7 @@ int main(int arg_count, char **args) {
     p_table.command_table = (s8 **)heapbuf_alloc_region(&p_memory, MAX_PRESETS);
     load_startup_files(&tbuf_group, &p_table);
 
-    process_args_gui(&rt_vars, arg_count, args);
+    handle_gui_options(&gui_opts, &rt_vars);
 
 #if _2PACMPEG_DEBUG
     printf("-- LOG START --\nmemory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\n", 
