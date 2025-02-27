@@ -73,40 +73,45 @@ typedef struct {
 
 #if defined(THANGZ_STRING)
 
-static inline u32 string_length(s8 *string) {
+static inline u32 string_length(s8 *string) 
+{
     u32 count = 0;
-    if(string) { 
-        while(*string++) { 
-            ++count; 
-        }
+    if(string) 
+    { 
+        while(*string++) 
+        { ++count; }
     }
-
     return count;
 }
 
-static inline s8 *string_copy(s8 *destination, s8 *source) {
+static inline s8 *string_copy(s8 *destination, s8 *source) 
+{
     while(*destination++ = *source++);
     return destination;
 }
 
-static inline s8 *string_n_copy(s8 *destination, s8 *source, u32 char_amount) {
-    for(u32 index = 0; index < char_amount; ++index) { 
-        *destination++ = *source++; 
-    }
+static inline s8 *string_n_copy(s8 *destination, s8 *source, u32 char_amount) 
+{
+    for(u32 index = 0; index < char_amount; ++index) 
+    { *destination++ = *source++; }
     return destination;
 }
 
-static inline void *mem_copy(void *destination, void *source, u64 bytes) {
-    while(bytes) {
+static inline void *mem_copy(void *destination, void *source, u64 bytes) 
+{
+    while(bytes) 
+    {
         *destination = *(u8 *)source += 1;
         --bytes;
     }
     return destination;
 }
 
-static inline void *mem_set_value(void *destination, u8 value, u64 bytes) {
+static inline void *mem_set_value(void *destination, u8 value, u64 bytes) 
+{
     u8 *temp = (u8 *)destination;
-    while(bytes) {
+    while(bytes) 
+    {
         *temp++ = value;
         --bytes;
     }                   
@@ -124,12 +129,12 @@ static inline void *mem_set_value(void *destination, u8 value, u64 bytes) {
 #include "time.h"
 
 //(microseconds)
-static inline uint64_t posixapi_get_timestamp(void) {
+static inline uint64_t posixapi_get_timestamp(void) 
+{
     uint64_t result;
     struct timespec tspec = {0};
     clock_gettime(CLOCK_MONOTONIC, &tspec);
     result = (tspec.tv_sec*1000000) + (tspec.tv_nsec / 1000);
-
     return result;
 }
 
@@ -137,42 +142,42 @@ static inline uint64_t posixapi_get_timestamp(void) {
 static bool32 posixapi_get_stdout(char *command, 
                                 int *output_fd, 
                                 pid_t *proc_id, 
-                                bool32 include_stderr) {
+                                bool32 include_stderr) 
+{
     bool32 result = false;
-
     int pipe_fd[2];
-    if(-1 == pipe(pipe_fd)) {
+    if(-1 == pipe(pipe_fd)) 
+    {
         perror("pipe");
         _exit(1);
     }
 
     *proc_id = fork();
-    if(-1 == *proc_id) {
+    if(-1 == *proc_id) 
+    {
         perror("fork");
         _exit(1);
-    } else if(0 == *proc_id) {
+    } 
+    else if(0 == *proc_id) 
+    {
         close(pipe_fd[STDIN_FILENO]);
         dup2(pipe_fd[STDOUT_FILENO], STDOUT_FILENO);
-
-        if(include_stderr) {dup2(STDOUT_FILENO, STDERR_FILENO);}
-
+        if(include_stderr) 
+        { dup2(STDOUT_FILENO, STDERR_FILENO); }
         close(pipe_fd[STDOUT_FILENO]);
-
         char _temp[1024*8];
         //idk why this only works with double single quotes
         snprintf(_temp, (1024*8) - 1, "''%s''", command);
-
         execl("/bin/sh", "sh", "-c", _temp, (char *)0);
         perror("execl");
-
         _exit(1);
-    } else {
+    } 
+    else 
+    {
         close(pipe_fd[STDOUT_FILENO]);
         *output_fd = pipe_fd[STDIN_FILENO];
-
         result = true;
     }
-
     return result;
 }
 
