@@ -5,7 +5,8 @@
     #define __ICON_ID 101
 #endif
 
-struct platform_thread_info {
+struct platform_thread_info 
+{
     SECURITY_ATTRIBUTES cmd_stream_attribs;
     STARTUPINFO cmd_stream_startupinfo;
     PROCESS_INFORMATION cmd_stream_processinfo;
@@ -18,7 +19,8 @@ struct platform_thread_info {
     program_enum prog_enum;
 };
 
-struct win32_thread_args {
+struct win32_thread_args 
+{
     text_buffer_group *_tbuf_group;
     platform_thread_info *_thread_info;
     runtime_vars *_rt_vars;
@@ -43,7 +45,7 @@ INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size);
 INTERNAL void check_ffmpeg_existence(text_buffer_group *tbuf_group);
 INTERNAL void win32_get_timestamp(LARGE_INTEGER *dest);
 INTERNAL DWORD win32_get_deltatime_ms(LONGLONG start, LONGLONG end, LONGLONG perfcounter_freq);
-INTERNAL void platform_process_args(runtime_vars *rt_vars, int arg_count, char **args);
+INTERNAL void win32_con_write(char *buf, int buf_bytes);
 
 #define WIN32_2PACMPEG_DOT_H
 #endif
