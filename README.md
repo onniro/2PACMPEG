@@ -38,7 +38,7 @@ _pac wuz tha meanin of lyfe..._
 
 ## 3.2. dependencies 
 - ImGui (included)
-- GLFW3 (included)
+- GLFW3 (if building on linux, run "sudo apt install libglfw3-dev" or an equivalent thing depending on your package manager)
 
 ## 3.3. actually building
 - append containing folder of clang++ to PATH shell environment variable if it's not already there
