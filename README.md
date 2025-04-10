@@ -20,7 +20,7 @@ _pac wuz tha meanin of lyfe..._
 - step 2: see section 3 lol
 
 ## 2. usage:
-- go to the folder where you unpacked the archive and click on the thing where it says 2PACMPEG
+- go to the folder where you put 2PACMPEG.EXE and click on that thang you get me
 - click on "select input file" to select input file (or type/paste in the path 2 tha file) (file picker only exists on windows)
 - you can also drag and drop a file on the window to input the path  
 - enter arguments for FFmpeg (you can do this by clicking on one of the presets on the right panel)
@@ -29,7 +29,7 @@ _pac wuz tha meanin of lyfe..._
 - enter the full path to the file that you want FFmpeg to output (eg. C:\files\file.mp4)
 - if you would like to always output to the same folder, without having to specify the full path every time, you can type the path to the desired folder in the "default output folder" -field and click on "set as default folder" (NOTE: you don't have to click this, but doing so saves this setting). after doing this you can always only specify the name of the file (e.g. "file.mp4" instead of "C:\files\file.mp4")(NOTE: if you have not set a default path and also only specify the output file name anyway, the file will be output to the containing folder of the ffmpeg executable used by 2PACMPEG)
 - click on "start FFmpeg" to launch FFmpeg with currently set arguments
-- there are some command line options available, you can use -h to see them
+- ffmpeg manual: <https://ffmpeg.org/ffmpeg.html>
 
 # 3. building
 
