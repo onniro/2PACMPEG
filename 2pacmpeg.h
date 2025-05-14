@@ -2,8 +2,8 @@
 #if !defined(_2PACMPEG_DOT_H)
 
 #define _2PACMPEG_VERSION_MAJOR (2)
-#define _2PACMPEG_VERSION_MINOR (4)
-#define _2PACMPEG_VERSION_PATCH (5)
+#define _2PACMPEG_VERSION_MINOR (6)
+#define _2PACMPEG_VERSION_PATCH (2)
 
 #define PMEMORY_AMT MEGABYTES(7)
 
@@ -38,11 +38,18 @@
 
 #if _2PACMPEG_LINUX
     #define MAX_FRAMETIME_MICROSECONDS ((useconds_t)16667)
-    #define DEFAULT_FONT_SIZE (15.0f)
+    #define DEFAULT_FONT_SIZE (16.0f)
 #elif _2PACMPEG_WIN32
     #define MAX_FRAMETIME_MILLISECONDS ((DWORD)16)
     #define DEFAULT_FONT_SIZE (13.0f)
 #endif
+
+struct program_memory;
+struct runtime_vars;
+struct text_buffer_group;
+struct preset_table;
+struct platform_thread_info;
+struct cmd_options;
 
 struct program_memory 
 {
@@ -58,6 +65,10 @@ struct runtime_vars
     GLFWwindow *win_ptr;
     bool32 ffmpeg_is_running;
     ImFont *default_font;
+    text_buffer_group *tbuf_group_ptr;
+    preset_table *p_table_ptr;
+    cmd_options *cmd_opts_ptr;
+    platform_thread_info *thread_info_ptr;
 };
 
 enum last_diagnostic_type 
@@ -69,10 +80,10 @@ enum last_diagnostic_type
 
 enum program_enum 
 {
-    ffmpeg = 0,
-    ffprobe,
-    ffplay,
-    other
+    program_enum_ffmpeg = 0,
+    program_enum_ffprobe,
+    program_enum_ffplay,
+    program_enum_other
 };
 
 struct text_buffer_group 
@@ -81,10 +92,10 @@ struct text_buffer_group
     s8 *input_path_buffer;
     s8 *output_path_buffer;
     s8 *default_path_buffer;
-    s8 *stdout_buffer;
     s8 *temp_buffer;
     s8 *user_cmd_buffer;
     s8 *stdout_line_buffer;
+    s8 *stdout_buffer;
     s8 *config_buffer;
 
     wchar_t *wchar_input_buffer;
@@ -96,7 +107,7 @@ struct text_buffer_group
     s8 *ffprobe_buffer;
 };
 
-struct preset_table 
+struct preset_table
 {
     int entry_amount;
     int capacity;
@@ -104,9 +115,10 @@ struct preset_table
     s8 *name_array;
 };
 
-struct cmd_gui_options 
+struct cmd_options 
 {
     bool8 use_bmp_font;
+    bool8 output_quiet;
     float font_size;
 };
 
@@ -118,8 +130,8 @@ INTERNAL char *get_version_string(char *ptr2buf);
 INTERNAL void show_version(void);
 INTERNAL void show_help(void);
 INTERNAL void show_license(void);
-INTERNAL bool8 process_options(cmd_gui_options *gui_opts, int arg_count, char **args);
-INTERNAL void handle_gui_options(cmd_gui_options *gui_opts, runtime_vars *rt_vars);
+INTERNAL bool8 process_options(cmd_options *cmd_opts, int arg_count, char **args);
+INTERNAL void handle_gui_options(cmd_options *cmd_opts, runtime_vars *rt_vars);
 INTERNAL void get_window_title(char *title);
 inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size);
 INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars);
