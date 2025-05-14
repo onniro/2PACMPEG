@@ -12,4 +12,4 @@
 /release_zips
 /mingw_build
 /test_linux_mingw_build.sh
-
+/testdata
