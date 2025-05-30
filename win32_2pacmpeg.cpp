@@ -362,14 +362,25 @@ INTERNAL DWORD win32_get_deltatime_ms(LONGLONG start,
     return result;
 }
 
-INTERNAL void win32_con_write(char *buf, int buf_bytes) 
+//trickery to get printf and shit to work since this is compiled
+//with /subsystem:console (unsure if this works)
+INTERNAL void win32_setup_con()
 {
-    AttachConsole(-1);
-    HANDLE stdout_handle = GetStdHandle(STD_OUTPUT_HANDLE);
-    if(stdout_handle != INVALID_HANDLE_VALUE) {
-        DWORD bytes_written;
-        WriteFile(stdout_handle, buf, buf_bytes, &bytes_written, 0);
-    } 
+#if 0
+    if (!AttachConsole(ATTACH_PARENT_PROCESS))
+    { return; }
+    HANDLE out_h = GetStdHandle(STD_OUTPUT_HANDLE);
+    int con_h = _open_osfhandle((intptr_t)outh, _O_TEXT);
+    FILE* fp_out = _fdopen(con_h, "w");
+    *stdout = *fp_out;
+    setvbuf(stdout, NULL, _IONBF, 0);
+
+    HANDLE err_h = GetStdHandle(STD_ERROR_HANDLE);
+    con_h = _open_osfhandle((intptr_t)err_h, _O_TEXT);
+    FILE* fp_err = _fdopen(con_h, "w");
+    *stderr = *fp_err;
+    setvbuf(stderr, NULL, _IONBF, 0);
+#endif
 }
 
 int __stdcall WinMain(HINSTANCE instance, 
@@ -377,6 +388,7 @@ int __stdcall WinMain(HINSTANCE instance,
                     char *cmd_args, 
                     int show_cmd) 
 {
+    win32_setup_con();
     if (process_options_simple(__argc, __argv))
     { return EXIT_SUCCESS; }
 
