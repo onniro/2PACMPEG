@@ -16,8 +16,6 @@ INTERNAL char *get_version_string(char *ptr2buf)
     return ptr2buf;
 }
 
-//NOTE: printf/related do nothing on windows when compiled with /subsystem:windows
-//(i believe this still does nothing on windows)
 #if _2PACMPEG_WIN32
     #define SHOW_TEXT(notice) MessageBoxA(0, notice, "notice", MB_OK)
 #elif _2PACMPEG_LINUX
@@ -78,13 +76,15 @@ INTERNAL void stdout_list_preset(preset_table *p_table,
     char *name = p_table->name_array + (PRESETNAME_PITCH*index);
     char *command = p_table->command_table[index];
     int len = command_length(command);
-    strncpy(scratch_buf, command, len);
-    scratch_buf[len] = 0;
-    printf("[%04d] name: \"%s\", args:\n%4s%s\n", 
-            index, name, "", scratch_buf);
+    if (len < bufsize) {
+        strncpy(scratch_buf, command, len);
+        scratch_buf[len] = 0;
+        printf("[%04d] name: \"%s\", args:\n%4s%s\n", 
+                index, name, "", scratch_buf);
+    }
 }
 
-INTERNAL void stdout_list_all_presets(preset_table *p_table)
+INTERNAL void stdout_list_all_presets(preset_table *p_table) 
 {
     printf("%d presets\n", p_table->entry_amount);
     const int bufsize = 8192;
@@ -101,7 +101,7 @@ INTERNAL bool8 cmdline_use_preset(int preset_index,
 {
     bool8 status = false;
     if ((preset_index <= 0L) && (errno == ERANGE)) {
-        fprintf(stderr, "error. the preset index you passed was invalid.");
+        fprintf(stderr, "error. the preset index you passed was invalid.\n");
         return status;
     }
 
@@ -130,7 +130,7 @@ INTERNAL bool8 cmdline_rm_preset(int rm_index,
 {
     bool8 status = false;
     if ((rm_index <= 0L) && (errno == ERANGE)) {
-        fprintf(stderr, "[error]: the preset index you passed was invalid.");
+        fprintf(stderr, "[error]: the preset index you passed was invalid.\n");
         return status;
     }
 
@@ -180,7 +180,7 @@ INTERNAL void process_inpath(char **args,
     if (len && string[len - 1])
     { string[len++] = ' '; }
     snprintf(string + len, 
-            PMEM_OUTPUTPATHBUFFERSIZE - 1, 
+            PMEM_OUTPUTPATHBUFFERSIZE,
             "-i \"%s\"", path_maybe);
 }
 
@@ -189,7 +189,7 @@ INTERNAL void cmdline_run_ffmpeg(runtime_vars *rt_vars,
 {
 #if _2PACMPEG_WIN32
     MessageBoxA(0, 
-                "running ffmpeg from the command line is not (yet) supported on this platform. sorry about that.\n",
+                "running ffmpeg from the command line is not (yet) supported on this platform. sorry about that.",
                 "error",
                 MB_OK|MB_ICONERROR);
     return;
@@ -253,11 +253,6 @@ INTERNAL void cmdline_add_preset(char *string,
     char *argsptr = strchr(string, '=');
     char name[PRESETNAME_PITCH];
 
-#if 0 //this is for allowing the user to escape = with \ but i think its stupid
-    while ((char *)(equal - 1) == '\\') {
-        equal = strchr(equal + 1, '=');
-    }
-#endif
     if (argsptr) {
         int namelen = (int)((uintptr_t)argsptr - (uintptr_t)string) + 1;
         ++argsptr;
@@ -277,12 +272,12 @@ INTERNAL void cmdline_add_preset(char *string,
                             tbuf_group->user_cmd_buffer);
                 }
             } else {
-                fprintf(stderr, "preset must have a name\n", 
+                fprintf(stderr, "[error]: preset must have a name\n", 
                         PRESETNAME_PITCH - 1);
                 show_add_error();
             }
         } else {
-            fprintf(stderr, "maximum preset name length is %d characters. sorry about that\n", 
+            fprintf(stderr, "[error]: maximum preset name length is %d characters.\n",
                     PRESETNAME_PITCH - 1);
             show_add_error();
         }
@@ -369,7 +364,6 @@ INTERNAL bool8 process_options_complex(int arg_count,
                 } else {
                     show_add_error();
                 }
-                //++arg_index;
                 break;
             } else if (!rm_set && !strcmp("-rm", arg)) {
                 should_exit = true;
@@ -380,9 +374,7 @@ INTERNAL bool8 process_options_complex(int arg_count,
                     fprintf(stderr, "[error]: you must pass a valid preset index after -rm.\n");
                 }
                 break;
-                //++arg_index;
             } else if (!output_set && !strcmp("-o", arg)) {
-                //should_exit = true;
                 output_set = true;
                 if (args[arg_index + 1]) 
                 { process_outpath(args, arg_index, rt_vars); }
@@ -531,8 +523,8 @@ INTERNAL void show_diagnostic(text_buffer_group *tbuf_group)
 {
     if (tbuf_group->diagnostic_buffer[0]) {
         last_diagnostic_type last_diagnostic = log_diagnostic(0, 
-                                                last_diagnostic_type::undefined, 
-                                                0);
+                                                    last_diagnostic_type::undefined, 
+                                                    0);
         switch (last_diagnostic) {
             case error: {
                 ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0xff, 0, 0, 0xFF));
@@ -552,15 +544,16 @@ INTERNAL void show_diagnostic(text_buffer_group *tbuf_group)
     ImVec2 text_dimensions = ImGui::CalcTextSize(tbuf_group->diagnostic_buffer);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (text_dimensions.y/2.0f));
     ImGui::Text(tbuf_group->diagnostic_buffer);
-    if(tbuf_group->diagnostic_buffer[0]) { ImGui::PopStyleColor(); }
+    if(tbuf_group->diagnostic_buffer[0]) 
+    { ImGui::PopStyleColor(); }
 }
 
 INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table) 
 {
     u64 config_size;
     if (platform_read_file(tbuf_group->config_path, 
-            tbuf_group->config_buffer, 
-            &config_size)) {
+        tbuf_group->config_buffer, 
+        &config_size)) {
 #if _2PACMPEG_DEBUG
 #if _2PACMPEG_WIN32
         OutputDebugStringA("[info]: loaded startup file.\n");
@@ -637,19 +630,16 @@ inline void adjust_pointer_table(preset_table *p_table,
                                  int subtract_from_ceil = 0) 
 {
     for (int move_index = rm_index;
-            move_index < (p_table->entry_amount - subtract_from_ceil);
-            ++move_index) {
+        move_index < (p_table->entry_amount - subtract_from_ceil);
+        ++move_index) {
         if (!move_index) {
             p_table->command_table[0] = strchr(tbuf_group->config_buffer, TOKEN_PRESETCMD);
-            if (p_table->command_table[0]) { 
-                p_table->command_table[0] += 1; 
-            }
+            if (p_table->command_table[0]) 
+            { p_table->command_table[0] += 1; }
         } else {
             p_table->command_table[move_index] = strchr(p_table->command_table[move_index - 1], TOKEN_PRESETCMD);
-            
-            if(p_table->command_table[move_index]) { 
-                p_table->command_table[move_index] += 1; 
-            }
+            if(p_table->command_table[move_index]) 
+            { p_table->command_table[move_index] += 1; }
         }
     }
 }
@@ -760,7 +750,7 @@ inline int command_length(s8 *command_begin)
 {
     int result = -1;
     s8 *command_end = strchr(command_begin, (s8)'\n');
-    if (!command_end) { 
+    if (!command_end) {
         s8 *command_end = strchr(command_begin, (s8)'\0'); 
     } if (command_end) { 
         result = command_end - command_begin; 
