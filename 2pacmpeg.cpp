@@ -22,7 +22,7 @@ INTERNAL char *get_version_string(char *ptr2buf)
     #define SHOW_TEXT(notice) fprintf(stdout, "%s", notice)
 #endif
 
-INTERNAL void show_version() 
+INTERNAL void show_version()
 {
     char ver_buffer[128];
 #if _2PACMPEG_RELEASE
@@ -189,9 +189,9 @@ INTERNAL void cmdline_run_ffmpeg(runtime_vars *rt_vars,
 {
 #if _2PACMPEG_WIN32
     MessageBoxA(0, 
-                "running ffmpeg from the command line is not (yet) supported on this platform. sorry about that.",
-                "error",
-                MB_OK|MB_ICONERROR);
+            "running ffmpeg from the command line is not (yet) supported on this platform. sorry about that.",
+            "error",
+            MB_OK|MB_ICONERROR);
     return;
 #elif _2PACMPEG_LINUX
     preset_table *p_table = rt_vars->p_table_ptr;
