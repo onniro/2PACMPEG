@@ -10,6 +10,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <pthread.h>
+#include <fontconfig/fontconfig.h>
 #include <stdlib.h>
 
 #if _2PACMPEG_DEBUG
@@ -173,8 +174,11 @@ INTERNAL char *platform_get_working_directory(char *destination, uint32_t buffer
     size_t bytes_read = readlink("/proc/self/exe", destination, buffer_size);
     destination[bytes_read] = 0x0;
     for (int char_index = (int)bytes_read; char_index >= 0; --char_index) {
-        if (destination[char_index] != '/') { destination[char_index] = 0x0; }
-        else { break; }
+        if (destination[char_index] != '/') {
+            destination[char_index] = 0x0;
+        } else {
+            break;
+        }
     }
     return destination;
 }
@@ -230,12 +234,44 @@ INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer
 INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) 
 {
     char font2load[1024];
+#if 0
     font2load[0] = 0;
     if (platform_file_exists("/usr/share/fonts/dejavu/DejaVuSansMono.ttf")) { 
         strncpy(font2load, "/usr/share/fonts/dejavu/DejaVuSansMono.ttf", 1024); 
     } else if (platform_file_exists("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")) { 
         strncpy(font2load, "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 1024); 
     }
+#else
+    FcInit();
+    FcConfig *fc_cfg = FcInitLoadConfigAndFonts();
+    FcPattern *pattern = FcNameParse((const FcChar8 *)"Liberation Mono:Regular");
+    FcObjectSet* obj_set = FcObjectSetBuild(FC_FILE, (void *)0);
+    FcFontSet *font_set = FcFontList(fc_cfg, pattern, obj_set);
+    FcChar8 *file;
+    FcPattern *font;
+    FcResult res;
+
+    for (int i = 0; i < font_set->nfont; ++i) {
+        font = font_set->fonts[i];
+        FcPatternGetString(font, FC_FILE, 0, &file);
+        if (!strcasestr((char *)file, "italic")) {
+            snprintf(font2load, sizeof(font2load), "%s", (char *)file);
+#if _2PACMPEG_DEBUG
+            printf("loading font %s\n", font2load);
+#endif
+            break;
+        }
+    }
+
+    FcFontSetDestroy(font_set);
+    FcObjectSetDestroy(obj_set);
+    FcPatternDestroy(pattern);
+    FcConfigDestroy(fc_cfg);
+    FcFini();
+
+    //exit(1);
+
+#endif
 
     if (*font2load) { 
         imgui_font_load_glyphs(font2load, font_size, rt_vars); 
@@ -253,11 +289,11 @@ int main(int arg_count, char **args)
     cmd_options cmd_opts = {0};
     text_buffer_group tbuf_group = {0};
     tbuf_group.input_path_buffer =      (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
-    tbuf_group.user_cmd_buffer =        (s8 *)heapbuf_alloc_region(&p_memory, PMEM_USRCOMMANDBUFFERSIZE);
     tbuf_group.output_path_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
     tbuf_group.default_path_buffer =    (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE); //no this is not an accident (but it is retarded)
     tbuf_group.wchar_input_buffer =     (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
     tbuf_group.command_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
+    tbuf_group.user_cmd_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_USRCOMMANDBUFFERSIZE);
     tbuf_group.temp_buffer =            (s8 *)heapbuf_alloc_region(&p_memory, PMEM_TEMPBUFFERSIZE);
     tbuf_group.config_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE);
     tbuf_group.stdout_line_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
@@ -336,7 +372,7 @@ int main(int arg_count, char **args)
     handle_gui_options(&cmd_opts, &rt_vars);
 
 #if _2PACMPEG_DEBUG
-    printf("-- LOG START --\nmemory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\n", 
+    printf("memory used:%.2f/%.2f MiB\nworking_directory:%s\nconfig_path:%s\n", 
             ((f32)(((u64)p_memory.write_ptr - (u64)p_memory.memory )) / 1024.0f / 1024.0f), 
             ((f32)p_memory.capacity) / 1024.0f / 1024.0f,
             tbuf_group.working_directory,
