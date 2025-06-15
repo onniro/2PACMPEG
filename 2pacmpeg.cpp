@@ -140,7 +140,7 @@ INTERNAL bool8 cmdline_rm_preset(int rm_index,
     if (rm_index <= p_table->entry_amount - 1) {
         char *name = p_table->name_array + (PRESETNAME_PITCH*rm_index);
         char *command = p_table->command_table[rm_index];
-        int command_len = command_length(command);
+        int command_len = command_length(command) + 1;
         if ((!cmd_opts->output_quiet) && 
             (command_len < PMEM_TEMPBUFFERSIZE)) {
             char *cmd_temp = tbuf_group->temp_buffer;
