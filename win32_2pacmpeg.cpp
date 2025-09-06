@@ -490,10 +490,6 @@ int __stdcall WinMain(HINSTANCE instance,
     //process_args_gui(&rt_vars, __argc, __argv);
     //handle_gui_options(&gui_opts, &rt_vars);
 
-    // ?? ok
-    if (tbuf_group.default_path_buffer) 
-    { tbuf_group.default_path_buffer[0] = 0x0; }
-
     set_text_buffer_group_ptr(&tbuf_group);
 
 #if _2PACMPEG_RELEASE
