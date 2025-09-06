@@ -364,8 +364,8 @@ int main(int arg_count, char **args)
     ImGui_ImplGlfw_InitForOpenGL(rt_vars.win_ptr, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    if (tbuf_group.default_path_buffer) 
-    { tbuf_group.default_path_buffer[0] = 0x0; }
+    //if (tbuf_group.default_path_buffer) 
+    //{ tbuf_group.default_path_buffer[0] = 0x0; }
 
     set_text_buffer_group_ptr(&tbuf_group);
 

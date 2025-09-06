@@ -566,6 +566,7 @@ INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_
         // can cause weird shit if the user is trying to be retarded
         s8 *default_dir_ptr = strchr(tbuf_group->config_buffer, TOKEN_OUTPUTDIR);
         if (default_dir_ptr && (*(default_dir_ptr + 1) != '\n')) {
+            tbuf_group->default_path_buffer[0] = 0;
             strncpy(tbuf_group->default_path_buffer, 
                     default_dir_ptr + 1,
                     command_length(default_dir_ptr + 1));
@@ -1260,8 +1261,8 @@ INTERNAL void basic_controls_update(text_buffer_group *tbuf_group,
     ImGui::Text("default output folder:");
     
     ImGui::InputText("##default_output_path",
-                     tbuf_group->default_path_buffer,
-                     PMEM_OUTPUTPATHBUFFERSIZE);
+                tbuf_group->default_path_buffer,
+                PMEM_OUTPUTPATHBUFFERSIZE);
     if (ImGui::Button("set as default folder")) {
         if (tbuf_group->default_path_buffer[0]) {
             tbuf_group->diagnostic_buffer[0] = 0x0;
@@ -1277,7 +1278,7 @@ INTERNAL void basic_controls_update(text_buffer_group *tbuf_group,
     ImGui::SameLine();
     //FIXME: this seems to do what i want it to do, but for some reason
     //save_default_output_path() stops giving diagnostics
-    if(ImGui::Button("remove##remove_default_outputpath")) {
+    if (ImGui::Button("remove##remove_default_outputpath")) {
         memset(tbuf_group->default_path_buffer, 0, 
                strlen(tbuf_group->default_path_buffer));
         
@@ -1285,7 +1286,7 @@ INTERNAL void basic_controls_update(text_buffer_group *tbuf_group,
         
         tbuf_group->diagnostic_buffer[0] = 0x0;
     }
-    
+
     if (ImGui::Button("start FFmpeg")) { 
         menu_start_ffmpeg(tbuf_group, rt_vars, thread_info); 
     }
