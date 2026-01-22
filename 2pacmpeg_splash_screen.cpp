@@ -8,8 +8,6 @@ Special splash screen stuff requested by karka
 
 #define STB_IMAGE_IMPLEMENTATION 1
 #include "stb_image.h"
-#define STB_IMAGE_WRITE_IMPLEMENTATION 1
-#include "stb_image_write.h"
 
 static struct Logo_Bitmap {
     uint32_t bytes;
@@ -33,8 +31,6 @@ static void init_splash(runtime_vars *rt_vars) {
 #else
     char *path = rt_vars->cmd_opts_ptr->splash_image_path;
     cmd_options *cmd_opts = rt_vars->cmd_opts_ptr;
-    if (!cmd_opts->splash_screen_frames) 
-    { cmd_opts->splash_screen_frames = SPLASH_SCREEN_DEFAULT_FRAMES; }
     if (!cmd_opts->splash_image_path ||
         !platform_file_exists(cmd_opts->splash_image_path))
     { return; }

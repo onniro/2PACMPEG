@@ -411,9 +411,10 @@ INTERNAL bool8 process_options_complex(int arg_count,
             } else if (!strcmp("-pac_greeting_frames", arg) && !cmd_opts->splash_screen_frames) {
                 if (args[arg_index + 1]) {
                     cmd_opts->splash_screen_frames = strtof(args[arg_index + 1], 0);
+                    if (cmd_opts->splash_screen_frames == 0.0f) { 
+                        cmd_opts->splash_screen_frames = SPLASH_SCREEN_DEFAULT_FRAMES; 
+                    }
                     ++arg_index;
-                } if (cmd_opts->splash_screen_frames == 0.0f) { 
-                    cmd_opts->splash_screen_frames = SPLASH_SCREEN_DEFAULT_FRAMES; 
                 }
             } else {
                 should_exit = true;
@@ -424,6 +425,10 @@ INTERNAL bool8 process_options_complex(int arg_count,
 
         if (use_set) {
             cmdline_run_ffmpeg(rt_vars, cmd_opts);
+        }
+
+        if (cmd_opts->splash_screen_frames == 0.0f) {
+            cmd_opts->splash_screen_frames = SPLASH_SCREEN_DEFAULT_FRAMES;
         }
         
         char *inpath = tbuf_group->input_path_buffer;
