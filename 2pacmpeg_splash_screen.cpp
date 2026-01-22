@@ -3,7 +3,7 @@
 File: 2pacmpeg_splash_screen.cpp
 Date: Wed 21 Jan 2026 08:58:40 PM EET
 
-Special splash screen stuff requested by karka
+Stuff related to a "splash screen" that can be enabled at startup with the -pac_greeting option
 */
 
 #define STB_IMAGE_IMPLEMENTATION 1
@@ -23,35 +23,22 @@ static struct Logo_Bitmap {
 
 static void init_splash(runtime_vars *rt_vars) {
     Logo_Bitmap *lb = &global_logo_bitmap;
-    //char path[PATH_MAX];
-#if 0
-    snprintf(path, sizeof(path), "%s/../misc/FFMPAC_DE.png",
-            rt_vars->tbuf_group_ptr->working_directory);
-    snprintf(path, sizeof(path), "%s", rt_vars->cmd_opts_ptr->splash_image_path);
-#else
     char *path = rt_vars->cmd_opts_ptr->splash_image_path;
     cmd_options *cmd_opts = rt_vars->cmd_opts_ptr;
     if (!cmd_opts->splash_image_path ||
         !platform_file_exists(cmd_opts->splash_image_path))
     { return; }
-    
-#endif
 
     lb->data = stbi_load(path,
                     &lb->width,
                     &lb->height,
                     &lb->chan,
                     STBI_rgb_alpha);
-    if (!lb->data) {
-        //fprintf(stderr, "error: couldn't load logo\n");
-        return;
-    }
+    if (!lb->data) { return; }
 
     lb->ogl_tex_id = 0;
     glGenTextures(1, &lb->ogl_tex_id);
     glBindTexture(GL_TEXTURE_2D, lb->ogl_tex_id);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
