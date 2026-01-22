@@ -118,7 +118,10 @@ struct cmd_options
 {
     bool8 use_bmp_font;
     bool8 output_quiet;
+    bool8 splash_screen_enabled;
     float font_size;
+    char *splash_image_path;
+    int splash_screen_frames;
 };
 
 //(forward declarations)

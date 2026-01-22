@@ -7,6 +7,8 @@ TODO: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
 #include "2pacmpeg.h"
 #include <errno.h>
 
+#include "2pacmpeg_splash_screen.cpp"
+
 INTERNAL char *get_version_string(char *ptr2buf) 
 {
     sprintf(ptr2buf, "v%u.%u.%02u",
@@ -398,6 +400,20 @@ INTERNAL bool8 process_options_complex(int arg_count,
                     }
                     fontsize_set = true;
                     ++arg_index;
+                }
+            } else if (!strcmp("-pac_greeting", arg) && !cmd_opts->splash_screen_enabled) {
+                cmd_opts->splash_screen_enabled = 1;
+            } else if (!strcmp("-pac_greeting_image", arg) && !cmd_opts->splash_image_path) {
+                if (args[arg_index + 1]) {
+                    cmd_opts->splash_image_path = args[arg_index + 1];
+                    ++arg_index;
+                }
+            } else if (!strcmp("-pac_greeting_frames", arg) && !cmd_opts->splash_screen_frames) {
+                if (args[arg_index + 1]) {
+                    cmd_opts->splash_screen_frames = strtof(args[arg_index + 1], 0);
+                    ++arg_index;
+                } if (cmd_opts->splash_screen_frames == 0.0f) { 
+                    cmd_opts->splash_screen_frames = SPLASH_SCREEN_DEFAULT_FRAMES; 
                 }
             } else {
                 should_exit = true;
@@ -1417,6 +1433,19 @@ INTERNAL void update_window(text_buffer_group *tbuf_group,
 #endif
     //this is pretty dumb
     LOCAL_STATIC bool32 first_loop = true;
+    LOCAL_STATIC int splash_counter = 0;
+
+    if (rt_vars->cmd_opts_ptr->splash_screen_enabled) {
+        if (splash_counter < rt_vars->cmd_opts_ptr->splash_screen_frames) {
+            if (!global_logo_bitmap.is_initialized) {
+                init_splash(rt_vars);
+            }
+            do_splash_screen(rt_vars);
+            ++splash_counter;
+            goto frame_cleanup;
+        }
+    }
+
     ImGui::Columns(2, "columns");
     if (first_loop) {
         first_loop = false;
@@ -1429,10 +1458,11 @@ INTERNAL void update_window(text_buffer_group *tbuf_group,
     ImGui::NextColumn();
     show_diagnostic(tbuf_group);
     
+frame_cleanup:
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
     ImGui::PopStyleColor();
-    //////////////////////
+
     ImGui::End();
     ImGui::Render();
     glfwGetFramebufferSize(rt_vars->win_ptr, &rt_vars->win_width, &rt_vars->win_height);

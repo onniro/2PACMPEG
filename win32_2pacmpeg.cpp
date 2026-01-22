@@ -363,7 +363,7 @@ INTERNAL DWORD win32_get_deltatime_ms(LONGLONG start,
 }
 
 //trickery to get printf and shit to work since this is compiled
-//with /subsystem:console (unsure if this works)
+//with /subsystem:console (unsure if this works) (no it doesn't)
 INTERNAL void win32_setup_con()
 {
 #if 0
