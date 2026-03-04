@@ -27,8 +27,7 @@
 
 #include "2pacmpeg.cpp"
 
-INTERNAL void *platform_make_heap_buffer(program_memory *target, u64 pool_size) 
-{
+static void *platform_make_heap_buffer(program_memory *target, u64 pool_size) {
     target->memory = VirtualAlloc(0, pool_size, 
                                    MEM_RESERVE|MEM_COMMIT,
                                    PAGE_READWRITE);
@@ -37,8 +36,7 @@ INTERNAL void *platform_make_heap_buffer(program_memory *target, u64 pool_size)
     return target->memory;
 }
 
-INTERNAL void platform_init_threading(platform_thread_info *thread_info) 
-{
+static void platform_init_threading(platform_thread_info *thread_info) {
     thread_info->cmd_stream_attribs.nLength = sizeof(SECURITY_ATTRIBUTES);
     thread_info->cmd_stream_attribs.bInheritHandle = TRUE;
 
@@ -59,8 +57,7 @@ INTERNAL void platform_init_threading(platform_thread_info *thread_info)
 #endif
 }
 
-DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) 
-{
+DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
     win32_thread_args *thread_args = (win32_thread_args *)thread_args_voidptr;
 
     //bit verbose but aight
@@ -119,8 +116,7 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr)
     return EXIT_SUCCESS;
 }
 
-DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr) 
-{
+DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr) {
     win32_thread_args *thread_args = (win32_thread_args *)thread_args_voidptr;
 
     thread_args->_thread_info->stdio_thread_handle = CreateThread(0, 0, 
@@ -168,19 +164,17 @@ DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr)
     return EXIT_SUCCESS;
 }
 
-INTERNAL bool32 platform_kill_process(platform_thread_info *thread_info) 
-{
+static bool32 platform_kill_process(platform_thread_info *thread_info) {
     bool32 result = false;
     if (TerminateProcess(thread_info->cmd_stream_processinfo.hProcess, PROCESS_TERMINATE)) 
     { result = true; }
     return result;
 }
 
-INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
-                                            platform_thread_info *thread_info,
-                                            runtime_vars *rt_vars,
-                                            bool8 detach) 
-{
+static void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
+                                        platform_thread_info *thread_info,
+                                        runtime_vars *rt_vars,
+                                        bool8 detach) {
     (void)detach;
 #if _2PACMPEG_DEBUG
     memset(tbuf_group->temp_buffer, 0, 
@@ -204,8 +198,7 @@ INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
 }
 
 #if 1
-INTERNAL wchar_t *platform_file_input_dialog(wchar_t *output_buffer) 
-{
+static wchar_t *platform_file_input_dialog(wchar_t *output_buffer) {
     HRESULT result = CoInitializeEx(0, COINIT_APARTMENTTHREADED|COINIT_DISABLE_OLE1DDE);
     if (SUCCEEDED(result)) {
         IFileOpenDialog *file_dialog;
@@ -233,8 +226,7 @@ INTERNAL wchar_t *platform_file_input_dialog(wchar_t *output_buffer)
 }
 #endif
 
-INTERNAL s8 *platform_get_working_directory(s8 *destination, DWORD buffer_size) 
-{
+static s8 *platform_get_working_directory(s8 *destination, DWORD buffer_size) {
     s8 *result = 0;
     DWORD path_length = GetModuleFileNameA(0, destination, buffer_size);
     if (path_length) {
@@ -247,24 +239,21 @@ INTERNAL s8 *platform_get_working_directory(s8 *destination, DWORD buffer_size)
     return result;
 }
 
-inline bool32 platform_file_exists(s8 *file_path) 
-{
+inline bool32 platform_file_exists(s8 *file_path) {
     bool32 result = false;
     if (PathFileExistsA(file_path)) 
     { result = true; }
     return result;
 }
 
-inline bool32 platform_directory_exists(s8 *directory_name) 
-{
+inline bool32 platform_directory_exists(s8 *directory_name) {
     bool32 result = false;
     if (PathIsDirectoryA(directory_name)) 
     { result = true; }
     return result;
 }
 
-INTERNAL bool32 platform_read_file(s8 *file_path, s8 *destination, u64 *dest_size) 
-{
+static bool32 platform_read_file(s8 *file_path, s8 *destination, u64 *dest_size) {
     bool32 result = false;
     HANDLE file_handle = CreateFileA(file_path, GENERIC_READ,
                                    FILE_SHARE_READ, 0, OPEN_EXISTING,
@@ -295,8 +284,7 @@ INTERNAL bool32 platform_read_file(s8 *file_path, s8 *destination, u64 *dest_siz
     return result;
 }
 
-INTERNAL bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_size) 
-{
+static bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_size) {
     bool32 result = false;
     HANDLE file_handle = CreateFileA(file_path, GENERIC_WRITE,
                                     FILE_SHARE_WRITE, 0, CREATE_ALWAYS, 0, 0);
@@ -316,8 +304,7 @@ INTERNAL bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_s
     return result;
 }
 
-INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) 
-{
+static void platform_load_font(runtime_vars *rt_vars, float font_size) {
     const int bufsz = PATH_MAX;
     char font2load[bufsz];
     if (platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) { 
@@ -327,8 +314,7 @@ INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size)
     }
 }
 
-INTERNAL void check_ffmpeg_existence(text_buffer_group *tbuf_group) 
-{
+static void check_ffmpeg_existence(text_buffer_group *tbuf_group) {
     char ffmpeg_path[PMEM_WORKINGDIRSIZE];
     snprintf(ffmpeg_path, PMEM_WORKINGDIRSIZE, 
             "%s\\ffmpeg\\ffmpeg.exe", 
@@ -349,23 +335,20 @@ INTERNAL void check_ffmpeg_existence(text_buffer_group *tbuf_group)
     }
 }
 
-INTERNAL void win32_get_timestamp(LARGE_INTEGER *dest) 
-{
+static void win32_get_timestamp(LARGE_INTEGER *dest) {
     QueryPerformanceCounter(dest);
 }
 
-INTERNAL DWORD win32_get_deltatime_ms(LONGLONG start, 
-                                    LONGLONG end, 
-                                    LONGLONG perfcounter_freq) 
-{
+static DWORD win32_get_deltatime_ms(LONGLONG start, 
+                                LONGLONG end, 
+                                LONGLONG perfcounter_freq) {
     DWORD result = (DWORD)((((float)end - (float)start)/(float)perfcounter_freq)*1000.0f);
     return result;
 }
 
 //trickery to get printf and shit to work since this is compiled
 //with /subsystem:console (unsure if this works) (no it doesn't)
-INTERNAL void win32_setup_con()
-{
+static void win32_setup_con() {
 #if 0
     if (!AttachConsole(ATTACH_PARENT_PROCESS))
     { return; }
@@ -386,8 +369,7 @@ INTERNAL void win32_setup_con()
 int __stdcall WinMain(HINSTANCE instance, 
                     HINSTANCE prev_instance, 
                     char *cmd_args, 
-                    int show_cmd) 
-{
+                    int show_cmd) {
     win32_setup_con();
     if (process_options_simple(__argc, __argv))
     { return EXIT_SUCCESS; }

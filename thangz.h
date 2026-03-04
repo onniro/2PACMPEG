@@ -60,14 +60,12 @@ typedef double f64;
 typedef int bool32;
 typedef char bool8;
 
-typedef struct 
-{
+typedef struct {
     f32 x;
     f32 y;
 } vec2;
 
-typedef struct 
-{
+typedef struct {
     f32 x;
     f32 y;
     f32 z;
@@ -75,8 +73,7 @@ typedef struct
 
 #if defined(THANGZ_STRING)
 
-static inline u32 string_length(s8 *string) 
-{
+static inline u32 string_length(s8 *string) {
     u32 count = 0;
     if (string) { 
         while (*string++) 
@@ -85,21 +82,18 @@ static inline u32 string_length(s8 *string)
     return count;
 }
 
-static inline s8 *string_copy(s8 *destination, s8 *source) 
-{
+static inline s8 *string_copy(s8 *destination, s8 *source) {
     while (*destination++ = *source++);
     return destination;
 }
 
-static inline s8 *string_n_copy(s8 *destination, s8 *source, u32 char_amount) 
-{
+static inline s8 *string_n_copy(s8 *destination, s8 *source, u32 char_amount) {
     for (u32 index = 0; index < char_amount; ++index) 
     { *destination++ = *source++; }
     return destination;
 }
 
-static inline void *mem_copy(void *destination, void *source, u64 bytes) 
-{
+static inline void *mem_copy(void *destination, void *source, u64 bytes) {
     while (bytes) {
         *destination = *(u8 *)source += 1;
         --bytes;
@@ -107,8 +101,7 @@ static inline void *mem_copy(void *destination, void *source, u64 bytes)
     return destination;
 }
 
-static inline void *mem_set_value(void *destination, u8 value, u64 bytes) 
-{
+static inline void *mem_set_value(void *destination, u8 value, u64 bytes) {
     u8 *temp = (u8 *)destination;
     while (bytes) {
         *temp++ = value;
@@ -128,8 +121,7 @@ static inline void *mem_set_value(void *destination, u8 value, u64 bytes)
 #include "time.h"
 
 //(microseconds)
-static inline uint64_t posixapi_get_timestamp(void) 
-{
+static inline uint64_t posixapi_get_timestamp(void) {
     uint64_t result;
     struct timespec tspec = {0};
     clock_gettime(CLOCK_MONOTONIC, &tspec);
@@ -141,8 +133,7 @@ static inline uint64_t posixapi_get_timestamp(void)
 static bool32 posixapi_get_stdout(char *command, 
                                 int *output_fd, 
                                 pid_t *proc_id, 
-                                bool32 include_stderr) 
-{
+                                bool32 include_stderr) {
     bool32 result = false;
     int pipe_fd[2];
     if (-1 == pipe(pipe_fd)) {

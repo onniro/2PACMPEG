@@ -34,8 +34,7 @@
 
 #include "2pacmpeg.cpp"
     
-INTERNAL void *platform_make_heap_buffer(program_memory *target, u64 pool_size) 
-{
+static void *platform_make_heap_buffer(program_memory *target, u64 pool_size) {
     target->memory = mmap(0, pool_size, PROT_READ|PROT_WRITE, 
                         MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
     target->write_ptr = target->memory;
@@ -43,14 +42,12 @@ INTERNAL void *platform_make_heap_buffer(program_memory *target, u64 pool_size)
     return target->memory;
 }
 
-INTERNAL void platform_init_threading(platform_thread_info *thread_info) 
-{
+static void platform_init_threading(platform_thread_info *thread_info) {
     //NOTE: no need to implement this on linux
     return;
 }
 
-extern void *platform_thread_read_proc_stdout(void *args_voidptr) 
-{
+extern void *platform_thread_read_proc_stdout(void *args_voidptr) {
     linux_thread_args *thread_args = (linux_thread_args *)args_voidptr;
     if (!posixapi_get_stdout(thread_args->_tbuf_group->command_buffer,
             &thread_args->_thread_info->file_descriptor,
@@ -120,8 +117,7 @@ extern void *platform_thread_read_proc_stdout(void *args_voidptr)
     pthread_exit(EXIT_SUCCESS);
 }
 
-INTERNAL bool32 platform_kill_process(platform_thread_info *thread_info) 
-{
+static bool32 platform_kill_process(platform_thread_info *thread_info) {
     bool32 result = false;
     //pid + 1 works lmao?
     if (-1 != kill(thread_info->proc_id + 1, SIGKILL)) 
@@ -133,11 +129,10 @@ INTERNAL bool32 platform_kill_process(platform_thread_info *thread_info)
     return result;
 }
 
-INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
+static void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
                                             platform_thread_info *thread_info,
                                             runtime_vars *rt_vars,
-                                            bool8 detach) 
-{
+                                            bool8 detach) {
 #if _2PACMPEG_DEBUG
     printf("[debug]: attempting to execute:\n%s\n", tbuf_group->command_buffer);
 #endif
@@ -162,15 +157,13 @@ INTERNAL void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
     }
 }
 
-INTERNAL wchar_t *platform_file_input_dialog(wchar_t *output_buffer) 
-{
+static wchar_t *platform_file_input_dialog(wchar_t *output_buffer) {
     //NOTE: X11 doesn't have a standard way to do this unlike Windows
     //so this won't be implemented for a while
     return output_buffer;
 }
 
-INTERNAL char *platform_get_working_directory(char *destination, uint32_t buffer_size) 
-{
+static char *platform_get_working_directory(char *destination, uint32_t buffer_size) {
     size_t bytes_read = readlink("/proc/self/exe", destination, buffer_size);
     destination[bytes_read] = 0x0;
     for (int char_index = (int)bytes_read; char_index >= 0; --char_index) {
@@ -183,8 +176,7 @@ INTERNAL char *platform_get_working_directory(char *destination, uint32_t buffer
     return destination;
 }
 
-inline bool32 platform_file_exists(char *file_path) 
-{
+inline bool32 platform_file_exists(char *file_path) {
     bool32 result = false;
     struct stat stat_struct;
     if (!stat(file_path, &stat_struct)) 
@@ -192,8 +184,7 @@ inline bool32 platform_file_exists(char *file_path)
     return result;
 }
 
-inline bool32 platform_directory_exists(char *directory_name) 
-{
+inline bool32 platform_directory_exists(char *directory_name) {
     bool32 result = false;
     struct stat stat_struct;
     if (!stat(directory_name, &stat_struct) && 
@@ -202,8 +193,7 @@ inline bool32 platform_directory_exists(char *directory_name)
     return result;
 }
 
-INTERNAL bool32 platform_read_file(char *file_path, char *destination, u64 *dest_size) 
-{
+static bool32 platform_read_file(char *file_path, char *destination, u64 *dest_size) {
     bool32 result = false;
     int file_descriptor = open(file_path, O_RDONLY);
     if (file_descriptor != -1) {
@@ -218,8 +208,7 @@ INTERNAL bool32 platform_read_file(char *file_path, char *destination, u64 *dest
     return result;
 }
 
-INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer_size) 
-{
+static bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer_size) {
     bool32 result = false;
     int file_descriptor = open(file_path, O_CREAT|O_WRONLY|O_TRUNC, S_IRUSR|S_IWUSR);
     if (file_descriptor != -1) {
@@ -230,11 +219,10 @@ INTERNAL bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer
     return result;
 }
 
-//FIXME: very hood method of searching for fonts
-INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size) 
-{
+static void platform_load_font(runtime_vars *rt_vars, float font_size) {
     char font2load[1024];
 #if 0
+    //ghetto
     font2load[0] = 0;
     if (platform_file_exists("/usr/share/fonts/dejavu/DejaVuSansMono.ttf")) { 
         strncpy(font2load, "/usr/share/fonts/dejavu/DejaVuSansMono.ttf", 1024); 
@@ -278,8 +266,7 @@ INTERNAL void platform_load_font(runtime_vars *rt_vars, float font_size)
     }
 }
 
-int main(int arg_count, char **args) 
-{
+int main(int arg_count, char **args) {
     if (process_options_simple(arg_count, args)) 
     { return 0; }
     program_memory p_memory = {0};

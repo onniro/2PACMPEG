@@ -4,6 +4,7 @@ File: 2pacmpeg_splash_screen.cpp
 Date: Wed 21 Jan 2026 08:58:40 PM EET
 
 Stuff related to a "splash screen" that can be enabled at startup with the -pac_greeting option
+(This feature was requested by karka)
 */
 
 #define STB_IMAGE_IMPLEMENTATION 1

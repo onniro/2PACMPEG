@@ -9,8 +9,7 @@ TODO: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
 
 #include "2pacmpeg_splash_screen.cpp"
 
-INTERNAL char *get_version_string(char *ptr2buf) 
-{
+static char *get_version_string(char *ptr2buf) {
     sprintf(ptr2buf, "v%u.%u.%02u",
             _2PACMPEG_VERSION_MAJOR,
             _2PACMPEG_VERSION_MINOR,
@@ -24,8 +23,7 @@ INTERNAL char *get_version_string(char *ptr2buf)
     #define SHOW_TEXT(notice) fprintf(stdout, "%s", notice)
 #endif
 
-INTERNAL void show_version()
-{
+static void show_version() {
     char ver_buffer[128];
 #if _2PACMPEG_RELEASE
     strcpy(ver_buffer, "2PACMPEG (release) ");
@@ -40,8 +38,7 @@ INTERNAL void show_version()
     //printf("%s", ver_buffer);
 }
 
-INTERNAL void show_help()
-{
+static void show_help() {
     const int bufsz = 4096;
     char buf[bufsz];
     snprintf(buf, bufsz, 
@@ -58,13 +55,15 @@ INTERNAL void show_help()
              "-rm <index> -> remove preset at index\n"
              "user interface related arguments:\n"
              "-bitmapfont -> do not attempt to load a vector font and resort to the ImGui bitmap font\n"
-             "-fontsize <number> -> set size for the vector font in place of <number> (default size: %.1f)\n",
+             "-fontsize <number> -> set size for the vector font in place of <number> (default size: %.1f)\n"
+             "-pac_greeting -> enable splash screen\n"
+             "-pac_greeting_frames <frames>-> number of frames splash screen is active for (we are 60fps)\n"
+             "-pac_greeting_image <path to image> -> full file path to image in the splash screen\n",
              DEFAULT_FONT_SIZE);
     SHOW_TEXT(buf);
 }
 
-INTERNAL void show_license() 
-{
+static void show_license() {
     char buf[1024];
     strncpy(buf, "DO WHAT THE FUCK YOU WANT TO PUBLIC LICENSE\n"
             "TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION\n"
@@ -72,11 +71,10 @@ INTERNAL void show_license()
     SHOW_TEXT(buf);
 }
 
-INTERNAL void stdout_list_preset(preset_table *p_table, 
-                                int index,
-                                char *scratch_buf, //i know this is dumb
-                                int bufsize)
-{
+static void stdout_list_preset(preset_table *p_table, 
+                            int index,
+                            char *scratch_buf, //i know this is dumb
+                            int bufsize) {
     char *name = p_table->name_array + (PRESETNAME_PITCH*index);
     char *command = p_table->command_table[index];
     int len = command_length(command);
@@ -88,8 +86,7 @@ INTERNAL void stdout_list_preset(preset_table *p_table,
     }
 }
 
-INTERNAL void stdout_list_all_presets(preset_table *p_table) 
-{
+static void stdout_list_all_presets(preset_table *p_table) {
     printf("%d presets\n", p_table->entry_amount);
     const int bufsize = 8192;
     char tempbuf[bufsize];
@@ -99,10 +96,9 @@ INTERNAL void stdout_list_all_presets(preset_table *p_table)
     }
 }
 
-INTERNAL bool8 cmdline_use_preset(int preset_index, 
+static bool8 cmdline_use_preset(int preset_index, 
                                 runtime_vars *rt_vars,
-                                preset_table *p_table)
-{
+                                preset_table *p_table) {
     bool8 status = false;
     if ((preset_index <= 0L) && (errno == ERANGE)) {
         fprintf(stderr, "error. the preset index you passed was invalid.\n");
@@ -128,10 +124,9 @@ INTERNAL bool8 cmdline_use_preset(int preset_index,
     return status;
 }
 
-INTERNAL bool8 cmdline_rm_preset(int rm_index, 
-                                runtime_vars *rt_vars,
-                                preset_table *p_table)
-{
+static bool8 cmdline_rm_preset(int rm_index,
+                            runtime_vars *rt_vars,
+                            preset_table *p_table) {
     bool8 status = false;
     if ((rm_index <= 0L) && (errno == ERANGE)) {
         fprintf(stderr, "[error]: the preset index you passed was invalid.\n");
@@ -162,10 +157,9 @@ INTERNAL bool8 cmdline_rm_preset(int rm_index,
     return status;
 }
 
-INTERNAL void process_outpath(char **args, 
-                            int arg_index, 
-                            runtime_vars *rt_vars)
-{
+static void process_outpath(char **args, 
+                        int arg_index, 
+                        runtime_vars *rt_vars) {
     text_buffer_group *tbuf_group = rt_vars->tbuf_group_ptr;
     char *path_maybe = args[arg_index + 1];
     snprintf(tbuf_group->output_path_buffer, 
@@ -173,10 +167,9 @@ INTERNAL void process_outpath(char **args,
             "%s", path_maybe);
 }
 
-INTERNAL void process_inpath(char **args, 
-                            int arg_index, 
-                            runtime_vars *rt_vars)
-{
+static void process_inpath(char **args,
+                        int arg_index,
+                        runtime_vars *rt_vars) {
     text_buffer_group *tbuf_group = rt_vars->tbuf_group_ptr;
     char *string = tbuf_group->input_path_buffer;
     char *path_maybe = args[arg_index + 1];
@@ -188,9 +181,7 @@ INTERNAL void process_inpath(char **args,
             "-i \"%s\"", path_maybe);
 }
 
-INTERNAL void cmdline_run_ffmpeg(runtime_vars *rt_vars, 
-                                cmd_options *cmd_opts)
-{
+static void cmdline_run_ffmpeg(runtime_vars *rt_vars, cmd_options *cmd_opts) {
 #if _2PACMPEG_WIN32
     MessageBoxA(0, 
             "running ffmpeg from the command line is not (yet) supported on this platform. sorry about that.",
@@ -241,16 +232,14 @@ INTERNAL void cmdline_run_ffmpeg(runtime_vars *rt_vars,
 #endif 
 }
 
-INTERNAL void show_add_error()
-{
+static void show_add_error() {
     fprintf(stderr, "[error]: you must pass a valid argument after -add.\n"
         "syntax: -add name=\"ffmpeg arguments\"\n");
 }
 
-INTERNAL void cmdline_add_preset(char *string, 
-                                runtime_vars *rt_vars,
-                                preset_table *p_table)
-{
+static void cmdline_add_preset(char *string, 
+                            runtime_vars *rt_vars,
+                            preset_table *p_table) {
     text_buffer_group *tbuf_group = rt_vars->tbuf_group_ptr;
     cmd_options *cmd_opts = rt_vars->cmd_opts_ptr;
     char *nameptr = string;
@@ -290,8 +279,7 @@ INTERNAL void cmdline_add_preset(char *string,
     }
 }
 
-INTERNAL bool8 process_options_simple(int arg_count, char **args)
-{
+static bool8 process_options_simple(int arg_count, char **args) {
     bool8 should_exit = false;
     char *arg;
     if (arg_count > 1) {
@@ -321,11 +309,10 @@ INTERNAL bool8 process_options_simple(int arg_count, char **args)
     return should_exit;
 }
 
-INTERNAL bool8 process_options_complex(int arg_count, 
+static bool8 process_options_complex(int arg_count, 
                                     char **args,
                                     cmd_options *cmd_opts,
-                                    runtime_vars *rt_vars)
-{
+                                    runtime_vars *rt_vars) {
     bool8 should_exit = false, 
             fontsize_set = false,
             use_set = false,
@@ -448,16 +435,14 @@ INTERNAL bool8 process_options_complex(int arg_count,
     return should_exit;
 }
 
-INTERNAL void handle_gui_options(cmd_options *cmd_opts, 
-                                runtime_vars *rt_vars) 
-{
+static void handle_gui_options(cmd_options *cmd_opts, 
+                            runtime_vars *rt_vars) {
     if (!cmd_opts->use_bmp_font) { 
         platform_load_font(rt_vars, cmd_opts->font_size); 
     }
 }
 
-INTERNAL void get_window_title(char *title) 
-{
+static void get_window_title(char *title) {
 #if _2PACMPEG_DEBUG
     strcpy(title, "(debug) 2PACMPEG ");
 #else
@@ -467,8 +452,7 @@ INTERNAL void get_window_title(char *title)
     strcat(title, " - 2PAC 4 LYFE (Definitive Edition)");
 }
 
-inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) 
-{
+inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) {
     void *result = 0;
     u64 free_memory = ((u64)pool->memory + pool->capacity) - (u64)pool->write_ptr;
     if (region_size <= free_memory) {
@@ -478,8 +462,7 @@ inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size)
     return result;
 }
 
-INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars) 
-{
+static void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars) {
     ImFontAtlas *im_io_fonts = ImGui::GetIO().Fonts;
     //has to be static otherwise it will crash in AddFontFromFileTTF()
     //due to the buffer mysteriously disappearing apparently
@@ -507,8 +490,7 @@ INTERNAL void imgui_font_load_glyphs(char *font2load, float font_size, runtime_v
                                                             glyph_ranges_buffer.Data);
 }
 
-INTERNAL void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list) 
-{
+static void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list) {
     LOCAL_STATIC text_buffer_group *tbuf_group = get_text_buffer_group_ptr(0);
     if (tbuf_group) { 
         strncpy(tbuf_group->input_path_buffer, 
@@ -517,8 +499,7 @@ INTERNAL void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **pat
     }
 }
 
-INTERNAL text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group) 
-{
+static text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group) {
     LOCAL_STATIC text_buffer_group *out_tbuf_group = 0;
     if (in_tbuf_group) {
         out_tbuf_group = in_tbuf_group;
@@ -528,10 +509,9 @@ INTERNAL text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf
 }
 #define set_text_buffer_group_ptr(ptr) get_text_buffer_group_ptr(ptr)
 
-INTERNAL last_diagnostic_type log_diagnostic(s8 *message, 
-                                             last_diagnostic_type type, 
-                                             text_buffer_group *tbuf_group) 
-{
+static last_diagnostic_type log_diagnostic(s8 *message, 
+                                         last_diagnostic_type type, 
+                                         text_buffer_group *tbuf_group) {
     LOCAL_STATIC last_diagnostic_type last_diagnostic = undefined;
     if (message && tbuf_group) {
         strncpy(tbuf_group->diagnostic_buffer, message, PMEM_DIAGNOSTICBUFFERSIZE);
@@ -542,8 +522,7 @@ INTERNAL last_diagnostic_type log_diagnostic(s8 *message,
     return last_diagnostic;
 }
 
-INTERNAL void show_diagnostic(text_buffer_group *tbuf_group) 
-{
+static void show_diagnostic(text_buffer_group *tbuf_group) {
     if (tbuf_group->diagnostic_buffer[0]) {
         last_diagnostic_type last_diagnostic = log_diagnostic(0, 
                                                     last_diagnostic_type::undefined, 
@@ -571,8 +550,7 @@ INTERNAL void show_diagnostic(text_buffer_group *tbuf_group)
     { ImGui::PopStyleColor(); }
 }
 
-INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table) 
-{
+static void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table) {
     u64 config_size;
     if (platform_read_file(tbuf_group->config_path, 
         tbuf_group->config_buffer, 
@@ -649,10 +627,9 @@ INTERNAL void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_
 
 //not really sure how slow this can get
 inline void adjust_pointer_table(preset_table *p_table, 
-                                 text_buffer_group *tbuf_group, 
-                                 int rm_index = 0, 
-                                 int subtract_from_ceil = 0) 
-{
+                             text_buffer_group *tbuf_group, 
+                             int rm_index = 0, 
+                             int subtract_from_ceil = 0) {
     for (int move_index = rm_index;
         move_index < (p_table->entry_amount - subtract_from_ceil);
         ++move_index) {
@@ -668,8 +645,7 @@ inline void adjust_pointer_table(preset_table *p_table,
     }
 }
 
-INTERNAL void save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table) 
-{
+static void save_default_output_path(text_buffer_group *tbuf_group, preset_table *p_table) {
     s8 *default_dir_begin;
     
     if (platform_file_exists(tbuf_group->config_path)) {
@@ -714,10 +690,9 @@ INTERNAL void save_default_output_path(text_buffer_group *tbuf_group, preset_tab
     }
 }
 
-INTERNAL bool32 serialize_preset(s8 *preset_name, 
-                                 s8 *preset_command, 
-                                 text_buffer_group *tbuf_group) 
-{
+static bool32 serialize_preset(s8 *preset_name, 
+                             s8 *preset_command, 
+                             text_buffer_group *tbuf_group) {
     memset(tbuf_group->temp_buffer, 0, strlen(tbuf_group->temp_buffer));
     snprintf(tbuf_group->temp_buffer,
              PMEM_TEMPBUFFERSIZE,
@@ -761,17 +736,15 @@ INTERNAL bool32 serialize_preset(s8 *preset_name,
 
 //NOTE: preset_name might not be null-delimited
 inline void insert_preset_name(preset_table *p_table, 
-                               s8 *preset_name,
-                               int preset_name_length, 
-                               int insert_index) 
-{
+                           s8 *preset_name,
+                           int preset_name_length, 
+                           int insert_index) {
     int insert_offset = PRESETNAME_PITCH*insert_index;
     strncpy(p_table->name_array + insert_offset,
             preset_name, preset_name_length);
 }
 
-inline int command_length(s8 *command_begin) 
-{
+inline int command_length(s8 *command_begin) {
     int result = -1;
     s8 *command_end = strchr(command_begin, (s8)'\n');
     if (!command_end) {
@@ -782,8 +755,9 @@ inline int command_length(s8 *command_begin)
     return result;
 }
 
-INTERNAL void remove_preset(preset_table *p_table, text_buffer_group *tbuf_group, int rm_index) 
-{
+static void remove_preset(preset_table *p_table,
+                        text_buffer_group *tbuf_group,
+                        int rm_index) {
     s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index * PRESETNAME_PITCH)))) - 2;
     u32 preset_length = command_length(whole_preset) + 1;
     //NOTE: this shit will never happen
@@ -851,8 +825,7 @@ INTERNAL void remove_preset(preset_table *p_table, text_buffer_group *tbuf_group
 }
 
 // NOTE: sub-optimal?
-inline bool32 check_duplicate_presetname(preset_table *p_table, s8 *p_name) 
-{
+inline bool32 check_duplicate_presetname(preset_table *p_table, s8 *p_name) {
     for (int name_index = 0; 
         name_index < p_table->entry_amount; 
         ++name_index) {
@@ -864,8 +837,7 @@ inline bool32 check_duplicate_presetname(preset_table *p_table, s8 *p_name)
     return false;
 }
 
-inline void strip_end_filename(s8 *file_path) 
-{
+inline void strip_end_filename(s8 *file_path) {
     int length = strlen(file_path);
     for (int char_index = length - 1; char_index >= 0; --char_index) {
 #if _2PACMPEG_WIN32
@@ -878,10 +850,9 @@ inline void strip_end_filename(s8 *file_path)
     }
 }
 
-INTERNAL void wait_ffprobe_result(text_buffer_group *tbuf_group,
-                                  runtime_vars *rt_vars,
-                                  platform_thread_info *thread_info) 
-{
+static void wait_ffprobe_result(text_buffer_group *tbuf_group,
+                              runtime_vars *rt_vars,
+                              platform_thread_info *thread_info) {
     thread_info->prog_enum = program_enum_ffprobe;
     volatile bool32 *_ffmpeg_is_running = &rt_vars->ffmpeg_is_running;
     *_ffmpeg_is_running = true;
@@ -957,12 +928,11 @@ INTERNAL void argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
 }
 
 //ffprobe <input> -show_entries format=nb_streams -v 0 -of compact=p=0:nk=1
-INTERNAL void argument_options_count_audio_tracks(text_buffer_group *tbuf_group,
-                                                  runtime_vars *rt_vars, 
-                                                  platform_thread_info *thread_info,
-                                                  char *target_filesize_buffer, 
-                                                  char *bitrate_buf) 
-{
+static void argument_options_count_audio_tracks(text_buffer_group *tbuf_group,
+                                              runtime_vars *rt_vars, 
+                                              platform_thread_info *thread_info,
+                                              char *target_filesize_buffer, 
+                                              char *bitrate_buf) {
     LOCAL_STATIC char audio_track_count_buf[AUDIO_TRACK_COUNT_BUFSIZE] = {0};
     
     if (ImGui::Button("count audio tracks##count_audio_tracks")) {
@@ -1036,12 +1006,11 @@ INTERNAL void argument_options_count_audio_tracks(text_buffer_group *tbuf_group,
     ImGui::PopItemWidth();
 }
 
-INTERNAL void argument_options(text_buffer_group *tbuf_group, 
-                               runtime_vars *rt_vars,
-                               platform_thread_info *thread_info,
-                               char *target_filesize_buffer,
-                               char *bitrate_buf) 
-{
+static void argument_options(text_buffer_group *tbuf_group, 
+                           runtime_vars *rt_vars,
+                           platform_thread_info *thread_info,
+                           char *target_filesize_buffer,
+                           char *bitrate_buf) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(0x22, 0x22, 0x33, 0xFF));
     ImGui::BeginChild("##arg_options", ImVec2(0.0f, 0.0f), 
                       ImGuiChildFlags_AutoResizeY|ImGuiChildFlags_NavFlattened);
@@ -1062,10 +1031,9 @@ INTERNAL void argument_options(text_buffer_group *tbuf_group,
     ImGui::PopStyleColor();
 }
 
-INTERNAL void add_args_to_presets(text_buffer_group *tbuf_group,
-                                  preset_table *p_table,
-                                  char *preset_name_buffer) 
-{
+static void add_args_to_presets(text_buffer_group *tbuf_group,
+                              preset_table *p_table,
+                              char *preset_name_buffer) {
     tbuf_group->diagnostic_buffer[0] = 0x0;
     if (p_table->entry_amount < MAX_PRESETS) {
         if (strlen(preset_name_buffer) > 0) {
@@ -1101,10 +1069,9 @@ INTERNAL void add_args_to_presets(text_buffer_group *tbuf_group,
     }
 }
 
-INTERNAL void menu_start_ffmpeg(text_buffer_group *tbuf_group,
-                                runtime_vars *rt_vars,
-                                platform_thread_info *thread_info) 
-{
+static void menu_start_ffmpeg(text_buffer_group *tbuf_group,
+                            runtime_vars *rt_vars,
+                            platform_thread_info *thread_info) {
     tbuf_group->diagnostic_buffer[0] = 0x0;
     if (!rt_vars->ffmpeg_is_running) {
         if (tbuf_group->input_path_buffer[0]) {
@@ -1173,11 +1140,10 @@ INTERNAL void menu_start_ffmpeg(text_buffer_group *tbuf_group,
     }
 }
 
-INTERNAL void basic_controls_update(text_buffer_group *tbuf_group, 
-                                    preset_table *p_table, 
-                                    runtime_vars *rt_vars, 
-                                    platform_thread_info *thread_info) 
-{
+static void basic_controls_update(text_buffer_group *tbuf_group, 
+                                preset_table *p_table, 
+                                runtime_vars *rt_vars, 
+                                platform_thread_info *thread_info) {
     //NOTE: could add a volatile pointer to ffmpeg_is_running just in case
     LOCAL_STATIC s8 preset_name_buffer[PRESETNAME_PITCH - 1] = {0};
     LOCAL_STATIC s8 target_filesize_buffer[SMALL_TEXTBUF_SIZE];
@@ -1339,11 +1305,11 @@ INTERNAL void basic_controls_update(text_buffer_group *tbuf_group,
             if (platform_kill_process(thread_info)) {
                 rt_vars->ffmpeg_is_running = false;
                 /*
-                                FIXME(27 sep '24) if ffmpeg actually does get killed normally,
-                                this message will never appear. it gets overwritten by "FFmpeg exited"
-                                during the same frame.
-                                **seeing this message in any case really means the total opposite
-                                of what it says.** 
+                FIXME(27 sep '24) if ffmpeg actually does get killed normally,
+                this message will never appear. it gets overwritten by "FFmpeg exited"
+                during the same frame.
+                **seeing this message in any case really means the total opposite
+                of what it says.** 
                 */
                 log_diagnostic("[info]: FFmpeg killed.", last_diagnostic_type::info, tbuf_group);
             } else { 
@@ -1371,10 +1337,9 @@ INTERNAL void basic_controls_update(text_buffer_group *tbuf_group,
     ImGui::PopItemWidth();
 }
 
-INTERNAL void preset_list_update(text_buffer_group *tbuf_group, 
-                                 preset_table *p_table, 
-                                 runtime_vars *rt_vars) 
-{
+static void preset_list_update(text_buffer_group *tbuf_group, 
+                             preset_table *p_table, 
+                             runtime_vars *rt_vars) {
     ImGui::Text("presets:");
     ImGui::BeginChild("argument_presets", ImVec2((f32)ImGui::GetColumnWidth(),
                                                  (f32)rt_vars->win_height - 45.0f));
@@ -1403,11 +1368,10 @@ INTERNAL void preset_list_update(text_buffer_group *tbuf_group,
     ImGui::EndChild();
 }
 
-INTERNAL void update_window(text_buffer_group *tbuf_group, 
+static void update_window(text_buffer_group *tbuf_group, 
                         preset_table *p_table, 
                         runtime_vars *rt_vars, 
-                        platform_thread_info *thread_info) 
-{
+                        platform_thread_info *thread_info) {
     glClearColor(0, 0, 0, 0xff);
     glClear(GL_COLOR_BUFFER_BIT);
     glfwPollEvents();
@@ -1442,9 +1406,8 @@ INTERNAL void update_window(text_buffer_group *tbuf_group,
 
     if (rt_vars->cmd_opts_ptr->splash_screen_enabled) {
         if (splash_counter < rt_vars->cmd_opts_ptr->splash_screen_frames) {
-            if (!global_logo_bitmap.is_initialized) {
-                init_splash(rt_vars);
-            }
+            if (!global_logo_bitmap.is_initialized)
+            { init_splash(rt_vars); }
             do_splash_screen(rt_vars);
             ++splash_counter;
             goto frame_cleanup;
