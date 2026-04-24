@@ -8,6 +8,7 @@ TODO: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
 #include <errno.h>
 
 #include "2pacmpeg_splash_screen.cpp"
+#include "2pacdlp.cpp"
 
 static char *get_version_string(char *ptr2buf) {
     sprintf(ptr2buf, "v%u.%u.%02u",
@@ -18,7 +19,7 @@ static char *get_version_string(char *ptr2buf) {
 }
 
 #if _2PACMPEG_WIN32
-    #define SHOW_TEXT(notice) MessageBoxA(0, notice, "notice", MB_OK)
+    #define SHOW_TEXT(notice) MessageBoxA(0, notice, "version", MB_OK)
 #elif _2PACMPEG_LINUX
     #define SHOW_TEXT(notice) fprintf(stdout, "%s", notice)
 #endif
@@ -184,7 +185,7 @@ static void process_inpath(char **args,
 static void cmdline_run_ffmpeg(runtime_vars *rt_vars, cmd_options *cmd_opts) {
 #if _2PACMPEG_WIN32
     MessageBoxA(0, 
-            "running ffmpeg from the command line is not (yet) supported on this platform. sorry about that.",
+            "running ffmpeg from the command line is not supported on this platform. sorry about that.",
             "error",
             MB_OK|MB_ICONERROR);
     return;
@@ -435,8 +436,7 @@ static bool8 process_options_complex(int arg_count,
     return should_exit;
 }
 
-static void handle_gui_options(cmd_options *cmd_opts, 
-                            runtime_vars *rt_vars) {
+static void handle_gui_options(cmd_options *cmd_opts, runtime_vars *rt_vars) {
     if (!cmd_opts->use_bmp_font) { 
         platform_load_font(rt_vars, cmd_opts->font_size); 
     }
@@ -490,13 +490,13 @@ static void imgui_font_load_glyphs(char *font2load, float font_size, runtime_var
                                                             glyph_ranges_buffer.Data);
 }
 
-static void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list) {
-    LOCAL_STATIC text_buffer_group *tbuf_group = get_text_buffer_group_ptr(0);
-    if (tbuf_group) { 
-        strncpy(tbuf_group->input_path_buffer, 
-                path_list[0], 
-                PMEM_INPUTPATHBUFFERSIZE); 
+static runtime_vars *get_runtime_vars(runtime_vars *in_rt_vars) {
+    LOCAL_STATIC runtime_vars *rt_vars = 0;
+    if (in_rt_vars) {
+        rt_vars = in_rt_vars;
+        return 0;
     }
+    return rt_vars;
 }
 
 static text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf_group) {
@@ -507,7 +507,26 @@ static text_buffer_group *get_text_buffer_group_ptr(text_buffer_group *in_tbuf_g
     }
     return out_tbuf_group;
 }
-#define set_text_buffer_group_ptr(ptr) get_text_buffer_group_ptr(ptr)
+
+static void glfw_drop_callback(GLFWwindow *win_ptr, int path_count, char **path_list) {
+    LOCAL_STATIC text_buffer_group *tbuf_group = get_text_buffer_group_ptr(0);
+    LOCAL_STATIC runtime_vars *rt_vars = get_runtime_vars(0);
+    switch (rt_vars->win_state) {
+    case window_state_ffmpeg_front_end: {
+        strncpy(tbuf_group->input_path_buffer, 
+                path_list[0], 
+                PMEM_INPUTPATHBUFFERSIZE - 1); 
+    } break;
+
+    case window_state_yt_dlp_front_end: {
+        strncpy(tbuf_group->download_outpath_buffer, 
+                path_list[0], 
+                PMEM_INPUTPATHBUFFERSIZE - 1); 
+    } break;
+
+    default: break;
+    }
+}
 
 static last_diagnostic_type log_diagnostic(s8 *message, 
                                          last_diagnostic_type type, 
@@ -522,7 +541,7 @@ static last_diagnostic_type log_diagnostic(s8 *message,
     return last_diagnostic;
 }
 
-static void show_diagnostic(text_buffer_group *tbuf_group) {
+static void show_diagnostic(text_buffer_group *tbuf_group, runtime_vars *rt_vars) {
     if (tbuf_group->diagnostic_buffer[0]) {
         last_diagnostic_type last_diagnostic = log_diagnostic(0, 
                                                     last_diagnostic_type::undefined, 
@@ -544,14 +563,88 @@ static void show_diagnostic(text_buffer_group *tbuf_group) {
     }
     
     ImVec2 text_dimensions = ImGui::CalcTextSize(tbuf_group->diagnostic_buffer);
-    ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (text_dimensions.y/2.0f));
+    //ImGui::SetCursorPosY(ImGui::GetCursorPosY() - (text_dimensions.y/2.0f));
+    ImGui::SetCursorPosY(rt_vars->win_height - (text_dimensions.y) - 5);
     ImGui::Text(tbuf_group->diagnostic_buffer);
-    if(tbuf_group->diagnostic_buffer[0]) 
+    if (tbuf_group->diagnostic_buffer[0]) 
     { ImGui::PopStyleColor(); }
+}
+
+static void build_saved_paths_array(saved_paths_array *p_array) {
+    char *read_ptr = p_array->paths[0];
+    p_array->num_paths = 0;
+    p_array->buffer_bytes = 0;
+    while (1) {
+        if (read_ptr[0]) { p_array->paths[p_array->num_paths] = read_ptr; }
+        else { break; }
+        int path_length = strlen(read_ptr);
+        read_ptr += path_length + 1; p_array->buffer_bytes += path_length + 1;
+        p_array->num_paths++;
+    }
+}
+
+static void saved_paths_make_array(text_buffer_group *tbuf_group) {
+    runtime_vars *rt_vars = get_runtime_vars(0);
+    saved_paths_array *p_array = &rt_vars->paths_array;
+    LOCAL_STATIC uintptr_t paths_array[MAX_PATHS];
+    p_array->paths = (char **)paths_array;
+    p_array->paths[0] = tbuf_group->paths_buffer;
+    p_array->capacity = MAX_PATHS;
+    p_array->num_paths = 0;
+    p_array->buffer_bytes = 0;
+    build_saved_paths_array(p_array);
+}
+
+static void debug_make_paths_file(runtime_vars *rt_vars) {
+    char buf[KILOBYTES(8)], *write_ptr = buf;
+    memset(buf, 0, sizeof(buf));
+    char test_path1[PATH_MAX] = "/test/path/aaa";
+    char test_path2[PATH_MAX] = "/test/path/bbbbbb";
+    char test_path3[PATH_MAX] = "/test/path/cccccccccc";
+    int bytes = 0;
+    int length1 = strlen(test_path1);
+    int length2 = strlen(test_path2);
+    int length3 = strlen(test_path3);
+    strcpy(write_ptr, test_path1); bytes += length1 + 1; write_ptr += length1 + 1;
+    strcpy(write_ptr, test_path2); bytes += length2 + 1; write_ptr += length2 + 1;
+    strcpy(write_ptr, test_path3); bytes += length3 + 1; write_ptr += length3 + 1;
+
+    snprintf(test_path1, PATH_MAX, "%s/2PACMPEG.PATHS", rt_vars->tbuf_group_ptr->working_directory);
+    platform_write_file(test_path1, buf, bytes);
+}
+
+static void load_saved_paths(text_buffer_group *tbuf_group) {
+#if 1
+    saved_paths_array *paths_array = &get_runtime_vars(0)->paths_array;
+    char paths_path[PATH_MAX];
+    snprintf(paths_path, PATH_MAX, "%s/2PACMPEG.PATHS", tbuf_group->working_directory);
+    u64 paths_bytes = 0;
+    if (platform_file_exists(paths_path)) {
+        platform_read_file(paths_path,
+                tbuf_group->paths_buffer,
+                &paths_bytes);
+    }
+    saved_paths_make_array(tbuf_group);
+    if (paths_array->num_paths) {
+        strncpy(tbuf_group->default_path_buffer, paths_array->paths[0], PATH_MAX - 1);
+        strncpy(tbuf_group->download_outpath_buffer, paths_array->paths[0], PATH_MAX - 1);
+    }
+        //saved_paths_array *p_array = &get_runtime_vars(0)->paths_array;
+        //for (int i = 0; i < p_array->num_paths; ++i) {
+        //    printf("%s\n", p_array->paths[i]);
+        //}
+#else
+    debug_make_paths_file(get_runtime_vars(0));
+#endif
 }
 
 static void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_table) {
     u64 config_size;
+
+    //debug_make_paths_file(get_runtime_vars(0));
+    tbuf_group->default_path_buffer[0] = 0;
+    tbuf_group->download_outpath_buffer[0] = 0;
+    load_saved_paths(tbuf_group);
     if (platform_read_file(tbuf_group->config_path, 
         tbuf_group->config_buffer, 
         &config_size)) {
@@ -562,14 +655,15 @@ static void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_ta
         printf("[info]: loaded startup file.\n");
 #endif
 #endif
-        // can cause weird shit if the user is trying to be retarded
-        s8 *default_dir_ptr = strchr(tbuf_group->config_buffer, TOKEN_OUTPUTDIR);
-        if (default_dir_ptr && (*(default_dir_ptr + 1) != '\n')) {
-            tbuf_group->default_path_buffer[0] = 0;
-            strncpy(tbuf_group->default_path_buffer, 
-                    default_dir_ptr + 1,
-                    command_length(default_dir_ptr + 1));
-        }
+        //s8 *default_dir_ptr = strchr(tbuf_group->config_buffer, TOKEN_OUTPUTDIR);
+        //if (default_dir_ptr && (*(default_dir_ptr + 1) != '\n')) {
+            //tbuf_group->default_path_buffer[0] = 0;
+            //NOTE: as of 3.1, more than 1 of these is allowed and it is in a separate file so 
+            //this shit is ignored
+            //strncpy(tbuf_group->default_path_buffer, 
+            //        default_dir_ptr + 1,
+            //        command_length(default_dir_ptr + 1));
+        //}
         
         s8 *name_ptr = tbuf_group->config_buffer;
         s8 *cmd_ptr = name_ptr;
@@ -690,6 +784,91 @@ static void save_default_output_path(text_buffer_group *tbuf_group, preset_table
     }
 }
 
+static u64 path_buffer_bytes(char **paths) {
+    u64 bytes = 0;
+    char *read_ptr = paths[0];
+    while (1) {
+        if (read_ptr[0] || read_ptr[1]) { ++bytes; }
+        else { break; }
+        ++read_ptr;
+    }
+    return bytes;
+}
+
+static void remove_saved_path(u32 path_index, runtime_vars *rt_vars) {
+//debug this shit some more i have no idea what is going on bro
+    saved_paths_array *p_array = &rt_vars->paths_array;
+    char *path_begin = p_array->paths[path_index];
+    int path_length = strlen(path_begin);
+    char **paths = p_array->paths;
+
+    if (path_index == (p_array->num_paths - 1)) {
+        memset(path_begin, 0, path_length);
+        p_array->num_paths--;
+        p_array->buffer_bytes -= path_length + 1;
+    } else {
+        char *next_path_begin = paths[path_index + 1];
+        memmove(path_begin, next_path_begin, p_array->buffer_bytes);
+        p_array->num_paths--;
+        int buffer_bytes_before = p_array->buffer_bytes;
+        p_array->buffer_bytes -= path_length + 1;
+        char *buffer = paths[0];
+        p_array->buffer_bytes= path_buffer_bytes(paths);
+        buffer[p_array->buffer_bytes] = 0;
+        build_saved_paths_array(p_array);
+    }
+
+    char savefile[PATH_MAX];
+    snprintf(savefile, PATH_MAX, "%s/2PACMPEG.PATHS", get_text_buffer_group_ptr(0)->working_directory);
+    platform_write_file(savefile, p_array->paths[0], p_array->buffer_bytes);
+
+#if _2PACMPEG_DEBUG
+    printf("removed path #%d, buffer_bytes=%d\narray:\n", p_array->num_paths, p_array->buffer_bytes);
+    for (int i = 0; i < p_array->num_paths; ++i) {
+        printf("%s\n", p_array->paths[i]);
+    }
+#endif
+}
+
+static void save_path(char *path_name, runtime_vars *rt_vars) {
+    text_buffer_group *tbuf_group = rt_vars->tbuf_group_ptr;
+    saved_paths_array *p_array = &rt_vars->paths_array;
+    if (!path_name[0]) {
+        log_diagnostic("[error]: why would you save an empty path?",
+                last_diagnostic_type::error,
+                tbuf_group);
+        return;
+    }
+
+    char savefile[PATH_MAX];
+    snprintf(savefile, PATH_MAX, "%s/2PACMPEG.PATHS", tbuf_group->working_directory);
+    char *write_ptr = p_array->paths[0], *last_path = p_array->paths[p_array->num_paths - 1];
+    int last_path_length = 0;
+    if (p_array->num_paths) {
+        last_path_length = strlen(last_path);
+        write_ptr = last_path + last_path_length + 1;
+    }
+    strncpy(write_ptr, path_name, PATH_MAX - 1);
+    p_array->paths[p_array->num_paths] = write_ptr;
+    p_array->num_paths++;
+    p_array->buffer_bytes += 1 + strlen(path_name);
+
+    if (platform_write_file(savefile,
+            tbuf_group->paths_buffer,
+            rt_vars->paths_array.buffer_bytes)) {
+        log_diagnostic("[info]: saved path.", last_diagnostic_type::info, tbuf_group);
+    } else {
+        log_diagnostic("[error]: could not save path.", last_diagnostic_type::error, tbuf_group);
+    }
+
+#if _2PACMPEG_DEBUG
+    printf("saved path #%d, buffer_bytes=%d\narray:\n", p_array->num_paths, p_array->buffer_bytes);
+    for (int i = 0; i < p_array->num_paths; ++i) {
+        printf("%s\n", p_array->paths[i]);
+    }
+#endif
+}
+
 static bool32 serialize_preset(s8 *preset_name, 
                              s8 *preset_command, 
                              text_buffer_group *tbuf_group) {
@@ -758,7 +937,7 @@ inline int command_length(s8 *command_begin) {
 static void remove_preset(preset_table *p_table,
                         text_buffer_group *tbuf_group,
                         int rm_index) {
-    s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index * PRESETNAME_PITCH)))) - 2;
+    s8 *whole_preset = (p_table->command_table[rm_index] - (strlen(p_table->name_array + (rm_index*PRESETNAME_PITCH)))) - 2;
     u32 preset_length = command_length(whole_preset) + 1;
     //NOTE: this shit will never happen
     if (preset_length == -1) {
@@ -776,12 +955,12 @@ static void remove_preset(preset_table *p_table,
     
     if (rm_index != (p_table->entry_amount - 1)) {
         u32 cmdbuf_end_bytes = strlen(p_table->command_table[rm_index + 1]) + 
-            strlen(p_table->name_array + ((rm_index + 1) * PRESETNAME_PITCH)) + 2;
+            strlen(p_table->name_array + ((rm_index + 1)*PRESETNAME_PITCH)) + 2;
         memset(whole_preset, 0, preset_length);
         memcpy(whole_preset, whole_preset + preset_length, cmdbuf_end_bytes);
         memset(whole_preset + cmdbuf_end_bytes, 0, preset_length);
         void *namearr_shift_location = p_table->name_array + (rm_index*PRESETNAME_PITCH);
-        void *namearr_last_elem_ptr = p_table->name_array + ((p_table->entry_amount - 1) * PRESETNAME_PITCH);
+        void *namearr_last_elem_ptr = p_table->name_array + ((p_table->entry_amount - 1)*PRESETNAME_PITCH);
         u32 namearr_end_bytes = (u32)((u64)namearr_last_elem_ptr - (u64)namearr_shift_location);
         memset(namearr_shift_location, 0, strlen((char *)namearr_shift_location));
         memcpy(namearr_shift_location, 
@@ -856,12 +1035,12 @@ static void wait_ffprobe_result(text_buffer_group *tbuf_group,
     thread_info->prog_enum = program_enum_ffprobe;
     volatile bool32 *_ffmpeg_is_running = &rt_vars->ffmpeg_is_running;
     *_ffmpeg_is_running = true;
-    platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars, true);
+    platform_execute_command(tbuf_group, thread_info, rt_vars, true);
     //TODO: add upper bound!!
     while (*_ffmpeg_is_running);
 }
 
-INTERNAL void argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
+static void argument_options_calculate_bitrate(text_buffer_group *tbuf_group,
                                                  runtime_vars *rt_vars, 
                                                  platform_thread_info *thread_info,
                                                  char *target_filesize_buffer, 
@@ -1131,7 +1310,7 @@ static void menu_start_ffmpeg(text_buffer_group *tbuf_group,
 #endif
             }
             thread_info->prog_enum = program_enum_ffmpeg;
-            platform_ffmpeg_execute_command(tbuf_group, thread_info, rt_vars, true);
+            platform_execute_command(tbuf_group, thread_info, rt_vars, true);
         } else { 
             log_diagnostic("no input file specified.", last_diagnostic_type::error, tbuf_group); 
         }
@@ -1201,9 +1380,8 @@ static void basic_controls_update(text_buffer_group *tbuf_group,
     ImGui::Text("args for FFmpeg:");
     ImGui::InputText("##ffmpeg_args", tbuf_group->user_cmd_buffer, PMEM_USRCOMMANDBUFFERSIZE);
 
-    if (ImGui::Button("add current args to presets")) { 
-        add_args_to_presets(tbuf_group, p_table, preset_name_buffer); 
-    }
+    if (ImGui::Button("add current args to presets"))
+    { add_args_to_presets(tbuf_group, p_table, preset_name_buffer); }
 
     ImGui::SameLine();
     ImGui::Text("preset name ->");
@@ -1245,11 +1423,44 @@ static void basic_controls_update(text_buffer_group *tbuf_group,
     }
 #endif
     
-    ImGui::Text("default output folder:");
-    
+    ImGui::Text("output folder:");
+
+    saved_paths_array *paths_array = &rt_vars->paths_array;
+    if (ImGui::BeginCombo("##saved_paths", "",
+        ImGuiComboFlags_NoPreview)) {
+        //ImGui::PushItemWidth(200);
+        ImGui::Text("saved paths:");
+        ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.5f));
+        char *current, btn_text[PATH_MAX + 8];
+        for (int path_index = 0; path_index < paths_array->num_paths; ++path_index) {
+            current = paths_array->paths[path_index];
+            snprintf(btn_text, sizeof(btn_text), "%s##2saved_path%d", current, path_index);
+
+            if (ImGui::Button(btn_text))
+            { strncpy(tbuf_group->default_path_buffer, current, PATH_MAX); }
+
+            if (ImGui::BeginPopupContextItem(btn_text)) {
+                if (ImGui::Button("remove##2pacmpeg_remove_path"))
+                { remove_saved_path(path_index, rt_vars); }
+                ImGui::EndPopup();
+            }
+        }
+        //ImGui::PopItemWidth();
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+
+    ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("save").x - 15.0f);
     ImGui::InputText("##default_output_path",
                 tbuf_group->default_path_buffer,
                 PMEM_OUTPUTPATHBUFFERSIZE);
+    ImGui::SameLine();
+    if (ImGui::Button("save"))
+    { save_path(tbuf_group->default_path_buffer, rt_vars); }
+#if 0
     if (ImGui::Button("set as default folder")) {
         if (tbuf_group->default_path_buffer[0]) {
             tbuf_group->diagnostic_buffer[0] = 0x0;
@@ -1268,11 +1479,10 @@ static void basic_controls_update(text_buffer_group *tbuf_group,
     if (ImGui::Button("remove##remove_default_outputpath")) {
         memset(tbuf_group->default_path_buffer, 0, 
                strlen(tbuf_group->default_path_buffer));
-        
         save_default_output_path(tbuf_group, p_table);
-        
         tbuf_group->diagnostic_buffer[0] = 0x0;
     }
+#endif
 
     if (ImGui::Button("start FFmpeg")) { 
         menu_start_ffmpeg(tbuf_group, rt_vars, thread_info); 
@@ -1298,8 +1508,8 @@ static void basic_controls_update(text_buffer_group *tbuf_group,
     }
     
     ImGui::SameLine(ImGui::GetColumnWidth() - 
-                    ImGui::CalcTextSize("kill FFmpeg").x - 15.0f);
-    if (ImGui::Button("kill FFmpeg")) {
+                    ImGui::CalcTextSize("kill").x - 15.0f);
+    if (ImGui::Button("kill")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
         if (rt_vars->ffmpeg_is_running) {
             if (platform_kill_process(thread_info)) {
@@ -1324,11 +1534,23 @@ static void basic_controls_update(text_buffer_group *tbuf_group,
         }
     }
     
+    ImGui::Text("output:");
+
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(10, 10, 10, 0xFF));
+    ImGui::PushStyleColor(ImGuiCol_Border, IM_COL32(70, 70, 70, 0xFF));
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 222, 0, 0xFF));
+
     ImGui::InputTextMultiline("##ffmpeg_output", tbuf_group->stdout_buffer, 
                               PMEM_STDOUTBUFFERSIZE, 
                               ImVec2((f32)(ImGui::GetColumnWidth() - 15.0f),
                                      (f32)(rt_vars->win_height - ImGui::GetCursorPosY()) - 25.0f), 
                               ImGuiInputTextFlags_ReadOnly);
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+    ImGui::PopStyleVar();
+
     if (rt_vars->ffmpeg_is_running) {
         ImGui::BeginChild("##ffmpeg_output");
         ImGui::SetScrollHereY(1.0f);
@@ -1343,6 +1565,7 @@ static void preset_list_update(text_buffer_group *tbuf_group,
     ImGui::Text("presets:");
     ImGui::BeginChild("argument_presets", ImVec2((f32)ImGui::GetColumnWidth(),
                                                  (f32)rt_vars->win_height - 45.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.5f));
     for (int preset_index = 0; 
             preset_index < p_table->entry_amount; 
             ++preset_index) {
@@ -1355,24 +1578,40 @@ static void preset_list_update(text_buffer_group *tbuf_group,
                         p_table->command_table[preset_index],
                         cmd_length);
             }
-        } 
-        if (ImGui::BeginPopupContextItem(p_table->name_array + 
+        } if (ImGui::BeginPopupContextItem(p_table->name_array + 
                 (preset_index * PRESETNAME_PITCH))) {
             // TODO: change the names
-            if (ImGui::Button("remove")) { 
-                remove_preset(p_table, tbuf_group, preset_index); 
-            }
+            if (ImGui::Button("remove"))
+            { remove_preset(p_table, tbuf_group, preset_index); }
             ImGui::EndPopup();
         }
     }
+    ImGui::PopStyleVar();
     ImGui::EndChild();
+}
+
+static void do_2pacmpeg(text_buffer_group *tbuf_group, 
+                        preset_table *p_table, 
+                        runtime_vars *rt_vars, 
+                        platform_thread_info *thread_info) {
+    static bool first_loop = true;
+    ImGui::Columns(2, "columns");
+        if (first_loop) {
+            first_loop = false;
+            ImGui::SetColumnWidth(0, (f32)rt_vars->win_width*0.75f);
+        }
+        
+        basic_controls_update(tbuf_group, p_table, rt_vars, thread_info);
+        ImGui::NextColumn();
+        preset_list_update(tbuf_group, p_table, rt_vars);
+        ImGui::NextColumn();
 }
 
 static void update_window(text_buffer_group *tbuf_group, 
                         preset_table *p_table, 
                         runtime_vars *rt_vars, 
                         platform_thread_info *thread_info) {
-    glClearColor(0, 0, 0, 0xff);
+    glClearColor(0, 0, 0, 0xFF);
     glClear(GL_COLOR_BUFFER_BIT);
     glfwPollEvents();
     ImGui_ImplOpenGL3_NewFrame();
@@ -1385,11 +1624,11 @@ static void update_window(text_buffer_group *tbuf_group,
     ImGui::PushStyleColor(ImGuiCol_FrameBg, IM_COL32(0, 70, 0, 0xFF));
     ImGui::PushStyleColor(ImGuiCol_WindowBg, IM_COL32(0, 0, 0, 0xFF));
     ImGui::Begin("2PACMPEG", 0, ImGuiWindowFlags_NoTitleBar
-                 |ImGuiWindowFlags_NoResize
-                 |ImGuiWindowFlags_NoMove
-                 |ImGuiWindowFlags_NoScrollbar
-                 |ImGuiWindowFlags_NoSavedSettings
-                 |ImGuiWindowFlags_NoDecoration);
+                             |ImGuiWindowFlags_NoResize
+                             |ImGuiWindowFlags_NoMove
+                             |ImGuiWindowFlags_NoScrollbar
+                             |ImGuiWindowFlags_NoSavedSettings
+                             |ImGuiWindowFlags_NoDecoration);
     
     //TODO: remap CTRL+TAB so that it toggles between the columns instead of doing nothing
     //(tried a lot of stuff but i cant get anything to work)
@@ -1400,31 +1639,43 @@ static void update_window(text_buffer_group *tbuf_group,
 #if _2PACMPEG_IMGUI_METRICS
     ImGui::ShowMetricsWindow();
 #endif
-    //this is pretty dumb
-    LOCAL_STATIC bool32 first_loop = true;
-    LOCAL_STATIC int splash_counter = 0;
+    LOCAL_STATIC int frame_counter = 0;
 
     if (rt_vars->cmd_opts_ptr->splash_screen_enabled) {
-        if (splash_counter < rt_vars->cmd_opts_ptr->splash_screen_frames) {
-            if (!global_logo_bitmap.is_initialized)
-            { init_splash(rt_vars); }
+        if (frame_counter < rt_vars->cmd_opts_ptr->splash_screen_frames) {
+            if (!global_logo_bitmap.is_initialized) { init_splash(rt_vars); }
             do_splash_screen(rt_vars);
-            ++splash_counter;
+            ++frame_counter;
             goto frame_cleanup;
         }
     }
 
-    ImGui::Columns(2, "columns");
-    if (first_loop) {
-        first_loop = false;
-        ImGui::SetColumnWidth(0, (f32)rt_vars->win_width*0.75f);
+#if 1
+    static char win_state_text[][32] = { "2PACMPEG", "2PACDLP" };
+
+    ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 200, 0, 255));
+    if (ImGui::Button(win_state_text[rt_vars->win_state]) ||
+        (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_Tab))) {
+        cycle_window_state(&rt_vars->win_state);
     }
-    
-    basic_controls_update(tbuf_group, p_table, rt_vars, thread_info);
-    ImGui::NextColumn();
-    preset_list_update(tbuf_group, p_table, rt_vars);
-    ImGui::NextColumn();
-    show_diagnostic(tbuf_group);
+    ImGui::PopStyleColor();
+    ImGui::PopStyleColor();
+#endif
+
+    switch (rt_vars->win_state) {
+    case window_state_ffmpeg_front_end: {
+        do_2pacmpeg(tbuf_group, p_table, rt_vars, thread_info);
+    } break;
+
+    case window_state_yt_dlp_front_end: {
+        do_2pacdlp(tbuf_group, p_table, rt_vars, thread_info);
+    } break;
+
+    default: break;
+    }
+
+    show_diagnostic(tbuf_group, rt_vars);
     
 frame_cleanup:
     ImGui::PopStyleColor();

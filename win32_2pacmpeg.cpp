@@ -104,10 +104,28 @@ DWORD __stdcall platform_thread_read_stdout(void *thread_args_voidptr) {
         }
     } break;
 
-    case program_enum_ffplay: {
-    } break;
+    case program_enum_ytdlp: {
+        u64 stdout_buffer_bytes = 0;
 
-    case program_enum_other: {
+        while (1) {
+            DWORD line_buffer_size;
+            if (ReadFile(thread_args->_thread_info->read_handle,
+                thread_args->_tbuf_group->stdout_line_buffer,
+                PMEM_STDOUTLINEBUFFERSIZE - 1, &line_buffer_size, 0)) {
+                stdout_buffer_bytes += line_buffer_size;
+
+                if (stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
+                    thread_args->_tbuf_group->stdout_buffer[0] = 0x0;
+                    stdout_buffer_bytes = 0;
+                }
+                
+                strncat(thread_args->_tbuf_group->stdout_buffer,
+                        thread_args->_tbuf_group->stdout_line_buffer, 
+                        PMEM_STDOUTBUFFERSIZE - stdout_buffer_bytes - 1);
+            } else { 
+                break; 
+            }
+        }
     } break;
 
     default: break;
@@ -133,20 +151,40 @@ DWORD __stdcall platform_thread_wait_for_exit(void *thread_args_voidptr) {
         &thread_args->_thread_info->cmd_stream_processinfo)) {
         thread_args->_rt_vars->ffmpeg_is_running = true;
 
-        if (*thread_args->_prog_enum == program_enum_ffmpeg) {
+        switch (*thread_args->_prog_enum) {
+        case program_enum_ffmpeg: {
             log_diagnostic("[info]: FFmpeg started...",
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
+        } break;
+
+        case program_enum_ytdlp: {
+            log_diagnostic("[info]: yt-dlp started...",
+                            last_diagnostic_type::info,
+                            thread_args->_tbuf_group);
+        } break;
+
+        default: break;
         }
 
         WaitForSingleObject(thread_args->_thread_info->cmd_stream_processinfo.hProcess, INFINITE);
 
         thread_args->_rt_vars->ffmpeg_is_running = false;
 
-        if (*thread_args->_prog_enum == program_enum_ffmpeg) {
+        switch (*thread_args->_prog_enum) {
+        case program_enum_ffmpeg: {
             log_diagnostic("[info]: FFmpeg exited.",
                             last_diagnostic_type::info,
                             thread_args->_tbuf_group);
+        } break;
+
+        case program_enum_ytdlp: {
+            log_diagnostic("[info]: yt-dlp exited.",
+                            last_diagnostic_type::info,
+                            thread_args->_tbuf_group);
+        } break;
+
+        default: break;
         }
     } else {
         log_diagnostic("[fatal error]: process failed to start.",
@@ -171,10 +209,10 @@ static bool32 platform_kill_process(platform_thread_info *thread_info) {
     return result;
 }
 
-static void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
-                                        platform_thread_info *thread_info,
-                                        runtime_vars *rt_vars,
-                                        bool8 detach) {
+static void platform_execute_command(text_buffer_group *tbuf_group,
+                                    platform_thread_info *thread_info,
+                                    runtime_vars *rt_vars,
+                                    bool8 detach) {
     (void)detach;
 #if _2PACMPEG_DEBUG
     memset(tbuf_group->temp_buffer, 0, 
@@ -305,11 +343,8 @@ static bool32 platform_write_file(s8 *file_path, void *in_buffer, u32 buffer_siz
 }
 
 static void platform_load_font(runtime_vars *rt_vars, float font_size) {
-    const int bufsz = PATH_MAX;
-    char font2load[bufsz];
-    if (platform_file_exists("C:\\Windows\\Fonts\\lucon.ttf")) { 
-        snprintf(font2load, bufsz, "%s", "C:\\Windows\\Fonts\\lucon.ttf");
-    } if (*font2load) { 
+    char font2load[]  = "C:\\Windows\\Fonts\\consola.ttf";
+    if (platform_file_exists(font2load)) { 
         imgui_font_load_glyphs(font2load, font_size, rt_vars); 
     }
 }
@@ -335,6 +370,23 @@ static void check_ffmpeg_existence(text_buffer_group *tbuf_group) {
     }
 }
 
+static char platform_check_ytdlp_existence(text_buffer_group *tbuf_group) {
+    char ytdlp_path[PMEM_WORKINGDIRSIZE];
+    snprintf(ytdlp_path, PMEM_WORKINGDIRSIZE, 
+            "%s\\ffmpeg\\yt-dlp.exe", 
+            tbuf_group->working_directory);
+    if (platform_file_exists(ytdlp_path)) { return 1; }
+
+    snprintf(ytdlp_path, PMEM_WORKINGDIRSIZE, 
+        "%s\\bin\\yt-dlp.exe", 
+        tbuf_group->working_directory);
+    if (platform_file_exists(ytdlp_path)) { return 1; }
+
+    log_diagnostic("[warning]: yt-dlp doesn't seem to be discoverable to 2PACMPEG.",
+                last_diagnostic_type::error, tbuf_group);
+    return 0;
+}
+
 static void win32_get_timestamp(LARGE_INTEGER *dest) {
     QueryPerformanceCounter(dest);
 }
@@ -348,8 +400,8 @@ static DWORD win32_get_deltatime_ms(LONGLONG start,
 
 //trickery to get printf and shit to work since this is compiled
 //with /subsystem:console (unsure if this works) (no it doesn't)
-static void win32_setup_con() {
 #if 0
+static void win32_setup_con() {
     if (!AttachConsole(ATTACH_PARENT_PROCESS))
     { return; }
     HANDLE out_h = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -363,14 +415,14 @@ static void win32_setup_con() {
     FILE* fp_err = _fdopen(con_h, "w");
     *stderr = *fp_err;
     setvbuf(stderr, NULL, _IONBF, 0);
-#endif
 }
+#endif
 
 int __stdcall WinMain(HINSTANCE instance, 
                     HINSTANCE prev_instance, 
                     char *cmd_args, 
                     int show_cmd) {
-    win32_setup_con();
+    //win32_setup_con();
     if (process_options_simple(__argc, __argv))
     { return EXIT_SUCCESS; }
 
@@ -380,20 +432,28 @@ int __stdcall WinMain(HINSTANCE instance,
     { return -1; }
 
     runtime_vars rt_vars = {0};
+    get_runtime_vars(&rt_vars);
     text_buffer_group tbuf_group = {0};
+    get_text_buffer_group_ptr(&tbuf_group);
     platform_thread_info thread_info = {0};
     cmd_options cmd_opts = {0};
     preset_table p_table = {0};
-    tbuf_group.input_path_buffer =      (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
-    tbuf_group.command_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
-    tbuf_group.temp_buffer =            (s8 *)heapbuf_alloc_region(&p_memory, PMEM_TEMPBUFFERSIZE);
-    tbuf_group.user_cmd_buffer =        (s8 *)heapbuf_alloc_region(&p_memory, PMEM_USRCOMMANDBUFFERSIZE);
-    tbuf_group.output_path_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
-    tbuf_group.default_path_buffer =    (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE); // no this is not an accident (but it is retarded)
-    tbuf_group.stdout_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
-    tbuf_group.stdout_line_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
-    tbuf_group.config_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE);
-    tbuf_group.wchar_input_buffer =     (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
+
+    tbuf_group.input_path_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
+    tbuf_group.input_path_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
+    tbuf_group.output_path_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
+    tbuf_group.default_path_buffer =        (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE); //no this is not an accident (but it is retarded)
+    tbuf_group.wchar_input_buffer =         (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
+    tbuf_group.command_buffer =             (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
+    tbuf_group.download_url_buffer =        (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
+    tbuf_group.download_outpath_buffer =    (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
+    tbuf_group.user_cmd_buffer =            (s8 *)heapbuf_alloc_region(&p_memory, PMEM_USRCOMMANDBUFFERSIZE);
+    tbuf_group.temp_buffer =                (s8 *)heapbuf_alloc_region(&p_memory, PMEM_TEMPBUFFERSIZE);
+    tbuf_group.config_buffer =              (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE/2);
+    tbuf_group.paths_buffer =               (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE/2);
+    tbuf_group.stdout_line_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
+    tbuf_group.stdout_buffer =              (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
+    memset(p_memory.memory, 0, PMEMORY_AMT);
 
     rt_vars.p_table_ptr =               &p_table;
     rt_vars.cmd_opts_ptr =              &cmd_opts;
@@ -406,7 +466,7 @@ int __stdcall WinMain(HINSTANCE instance,
     tbuf_group.ffprobe_buffer = _ffprobe_buffer;
 
     tbuf_group.working_directory =  (s8 *)heapbuf_alloc_region(&p_memory, PMEM_WORKINGDIRSIZE);
-    platform_get_working_directory(tbuf_group.working_directory, 1024);
+    platform_get_working_directory(tbuf_group.working_directory, PATH_MAX);
 
     if (tbuf_group.working_directory) {
         //maybe should get rid of this as well?
@@ -420,6 +480,7 @@ int __stdcall WinMain(HINSTANCE instance,
     p_table.name_array = (s8 *)heapbuf_alloc_region(&p_memory, PRESETNAME_PITCH*MAX_PRESETS);
     memset(p_table.name_array, 0, PRESETNAME_PITCH*MAX_PRESETS);
     p_table.command_table = (s8 **)heapbuf_alloc_region(&p_memory, MAX_PRESETS);
+
     load_startup_files(&tbuf_group, &p_table);
 
     if (process_options_complex(__argc, __argv, &cmd_opts, &rt_vars)) 
@@ -469,10 +530,8 @@ int __stdcall WinMain(HINSTANCE instance,
     ImGui_ImplGlfw_InitForOpenGL(rt_vars.win_ptr, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
-    //process_args_gui(&rt_vars, __argc, __argv);
-    //handle_gui_options(&gui_opts, &rt_vars);
+    handle_gui_options(&cmd_opts, &rt_vars);
 
-    set_text_buffer_group_ptr(&tbuf_group);
 
 #if _2PACMPEG_RELEASE
     SetClassLongPtr(glfwGetWin32Window(rt_vars.win_ptr),GCLP_HICON,

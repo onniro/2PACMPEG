@@ -1,5 +1,4 @@
 @echo off
-@echo NOTE: make sure to update version macros in 2pacmpeg.h before releasing 4real!
 
 set SOURCES=%CD%\deps\imgui\imgui*.cpp %CD%\win32_2pacmpeg.cpp
 REM set SOURCES=%CD%\win32_2pacmpeg.cpp

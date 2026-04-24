@@ -34,6 +34,10 @@
 
 #include "2pacmpeg.cpp"
     
+static char platform_check_ytdlp_existence(text_buffer_group *tbuf_group) {
+    return 1;
+}
+
 static void *platform_make_heap_buffer(program_memory *target, u64 pool_size) {
     target->memory = mmap(0, pool_size, PROT_READ|PROT_WRITE, 
                         MAP_PRIVATE|MAP_ANONYMOUS, 0, 0);
@@ -74,7 +78,7 @@ extern void *platform_thread_read_proc_stdout(void *args_voidptr) {
             bytes_read = read(thread_args->_thread_info->file_descriptor,
                             line_buffer,
                             PMEM_STDOUTLINEBUFFERSIZE - 1);
-            if(! bytes_read) { break; }
+            if (!bytes_read) { break; }
             stdout_buffer_bytes += bytes_read;
             if (stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
                 full_buffer[0] = 0x0;
@@ -100,10 +104,27 @@ extern void *platform_thread_read_proc_stdout(void *args_voidptr) {
         }
     } break;
 
-    case program_enum_ffplay: {
-    } break;
+    case program_enum_ytdlp: {
+        log_diagnostic("[info]: yt-dlp started...",
+                        last_diagnostic_type::info,
+                        thread_args->_tbuf_group);
+        ssize_t bytes_read = 0;
+        u64 stdout_buffer_bytes = 0;
+        while (1) {
+            bytes_read = read(thread_args->_thread_info->file_descriptor,
+                            line_buffer,
+                            PMEM_STDOUTLINEBUFFERSIZE - 1);
+            if (!bytes_read) { break; }
+            stdout_buffer_bytes += bytes_read;
+            if (stdout_buffer_bytes >= STDOUT_BUFFER_RESET_THRESHOLD) {
+                full_buffer[0] = 0x0;
+                stdout_buffer_bytes = 0;
+            }
+            strncat(full_buffer, line_buffer,
+                    PMEM_STDOUTBUFFERSIZE - stdout_buffer_bytes - 1);
+        }
 
-    case program_enum_other: {
+        log_diagnostic("[info]: yt-dlp exited.", last_diagnostic_type::info, thread_args->_tbuf_group);
     } break;
 
     default: break;
@@ -129,10 +150,10 @@ static bool32 platform_kill_process(platform_thread_info *thread_info) {
     return result;
 }
 
-static void platform_ffmpeg_execute_command(text_buffer_group *tbuf_group,
-                                            platform_thread_info *thread_info,
-                                            runtime_vars *rt_vars,
-                                            bool8 detach) {
+static void platform_execute_command(text_buffer_group *tbuf_group,
+                                    platform_thread_info *thread_info,
+                                    runtime_vars *rt_vars,
+                                    bool8 detach) {
 #if _2PACMPEG_DEBUG
     printf("[debug]: attempting to execute:\n%s\n", tbuf_group->command_buffer);
 #endif
@@ -193,6 +214,7 @@ inline bool32 platform_directory_exists(char *directory_name) {
     return result;
 }
 
+//only cowards care about buffer overflow
 static bool32 platform_read_file(char *file_path, char *destination, u64 *dest_size) {
     bool32 result = false;
     int file_descriptor = open(file_path, O_RDONLY);
@@ -221,18 +243,13 @@ static bool32 platform_write_file(char *file_path, void *in_buffer, u64 buffer_s
 
 static void platform_load_font(runtime_vars *rt_vars, float font_size) {
     char font2load[1024];
-#if 0
-    //ghetto
-    font2load[0] = 0;
-    if (platform_file_exists("/usr/share/fonts/dejavu/DejaVuSansMono.ttf")) { 
-        strncpy(font2load, "/usr/share/fonts/dejavu/DejaVuSansMono.ttf", 1024); 
-    } else if (platform_file_exists("/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf")) { 
-        strncpy(font2load, "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", 1024); 
-    }
-#else
     FcInit();
     FcConfig *fc_cfg = FcInitLoadConfigAndFonts();
-    FcPattern *pattern = FcNameParse((const FcChar8 *)"Liberation Mono:Regular");
+
+    //FcPattern *pattern = FcNameParse((const FcChar8 *)"Liberation Mono:Regular");
+    FcPattern *pattern = FcNameParse((const FcChar8 *)"DejaVu Sans Mono:Regular");
+    //FcPattern *pattern = FcNameParse((const FcChar8 *)"Unifont:Regular");
+
     FcObjectSet* obj_set = FcObjectSetBuild(FC_FILE, (void *)0);
     FcFontSet *font_set = FcFontList(fc_cfg, pattern, obj_set);
     FcChar8 *file;
@@ -242,7 +259,8 @@ static void platform_load_font(runtime_vars *rt_vars, float font_size) {
     for (int i = 0; i < font_set->nfont; ++i) {
         font = font_set->fonts[i];
         FcPatternGetString(font, FC_FILE, 0, &file);
-        if (!strcasestr((char *)file, "italic")) {
+        if (!strcasestr((char *)file, "italic") &&
+            !strcasestr((char *)file, "oblique")) {
             snprintf(font2load, sizeof(font2load), "%s", (char *)file);
 #if _2PACMPEG_DEBUG
             printf("loading font %s\n", font2load);
@@ -259,8 +277,6 @@ static void platform_load_font(runtime_vars *rt_vars, float font_size) {
 
     //exit(1);
 
-#endif
-
     if (*font2load) { 
         imgui_font_load_glyphs(font2load, font_size, rt_vars); 
     }
@@ -275,16 +291,21 @@ int main(int arg_count, char **args) {
     if (!p_memory.memory) { return -1; }
     cmd_options cmd_opts = {0};
     text_buffer_group tbuf_group = {0};
-    tbuf_group.input_path_buffer =      (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
-    tbuf_group.output_path_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
-    tbuf_group.default_path_buffer =    (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE); //no this is not an accident (but it is retarded)
-    tbuf_group.wchar_input_buffer =     (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
-    tbuf_group.command_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
-    tbuf_group.user_cmd_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_USRCOMMANDBUFFERSIZE);
-    tbuf_group.temp_buffer =            (s8 *)heapbuf_alloc_region(&p_memory, PMEM_TEMPBUFFERSIZE);
-    tbuf_group.config_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE);
-    tbuf_group.stdout_line_buffer =     (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
-    tbuf_group.stdout_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
+    get_text_buffer_group_ptr(&tbuf_group);
+    tbuf_group.input_path_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
+    tbuf_group.output_path_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
+    tbuf_group.default_path_buffer =        (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE); //no this is not an accident (but it is retarded)
+    tbuf_group.wchar_input_buffer =         (wchar_t *)heapbuf_alloc_region(&p_memory, PMEM_WCHAR_INPUTBUFSIZE);
+    tbuf_group.command_buffer =             (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
+    tbuf_group.download_url_buffer =        (s8 *)heapbuf_alloc_region(&p_memory, PMEM_COMMANDBUFFERSIZE);
+    tbuf_group.download_outpath_buffer =    (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
+    tbuf_group.user_cmd_buffer =            (s8 *)heapbuf_alloc_region(&p_memory, PMEM_USRCOMMANDBUFFERSIZE);
+    tbuf_group.temp_buffer =                (s8 *)heapbuf_alloc_region(&p_memory, PMEM_TEMPBUFFERSIZE);
+    tbuf_group.config_buffer =              (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE/2);
+    tbuf_group.paths_buffer =               (s8 *)heapbuf_alloc_region(&p_memory, PMEM_CONFIGBUFFERSIZE/2);
+    tbuf_group.stdout_line_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
+    tbuf_group.stdout_buffer =              (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
+    memset(p_memory.memory, 0, PMEMORY_AMT);
 
     s8 _diagnostic_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
     s8 _ffprobe_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0}; 
@@ -299,6 +320,7 @@ int main(int arg_count, char **args) {
 
     platform_thread_info thread_info = {0};
     runtime_vars rt_vars = {0};
+    get_runtime_vars(&rt_vars);
     rt_vars.win_width = 960;
     rt_vars.win_height = 540;
     rt_vars.ffmpeg_is_running = false;
@@ -353,8 +375,6 @@ int main(int arg_count, char **args) {
 
     //if (tbuf_group.default_path_buffer) 
     //{ tbuf_group.default_path_buffer[0] = 0x0; }
-
-    set_text_buffer_group_ptr(&tbuf_group);
 
     handle_gui_options(&cmd_opts, &rt_vars);
 

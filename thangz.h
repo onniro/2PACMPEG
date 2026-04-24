@@ -11,12 +11,6 @@
     #pragma clang diagnostic ignored "-Wwritable-strings"
 #endif
 
-#if !defined(INTERNAL)
-    #define INTERNAL static
-#else
-    #pragma warning "'INTERNAL' already defined"
-#endif
-
 #if !defined(GLOBAL)
     #define GLOBAL static
 #else
