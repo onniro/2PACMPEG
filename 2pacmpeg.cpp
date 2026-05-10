@@ -10,12 +10,12 @@ TODO: so.. fvcking.. many.. #ifs... (refactor logging among other shit)
 #include "2pacmpeg_splash_screen.cpp"
 #include "2pacdlp.cpp"
 
-static char *get_version_string(char *ptr2buf) {
-    sprintf(ptr2buf, "v%u.%u.%02u",
+static char *get_version_string(char *buffer) {
+    sprintf(buffer, "v%u.%u.%02u",
             _2PACMPEG_VERSION_MAJOR,
             _2PACMPEG_VERSION_MINOR,
             _2PACMPEG_VERSION_PATCH);
-    return ptr2buf;
+    return buffer;
 }
 
 #if _2PACMPEG_WIN32
@@ -460,6 +460,25 @@ inline void *heapbuf_alloc_region(program_memory *pool, u64 region_size) {
         pool->write_ptr = (void *)((u64)pool->write_ptr + region_size);
     }
     return result;
+}
+
+static void assign_buffers(runtime_vars *rt_vars, program_memory *p_memory) {
+    text_buffer_group *tbuf_group = rt_vars->tbuf_group_ptr;
+
+    tbuf_group->input_path_buffer =          (s8 *)heapbuf_alloc_region(p_memory, PMEM_INPUTPATHBUFFERSIZE);
+    tbuf_group->output_path_buffer =         (s8 *)heapbuf_alloc_region(p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
+    tbuf_group->default_path_buffer =        (s8 *)heapbuf_alloc_region(p_memory, PMEM_OUTPUTPATHBUFFERSIZE); //no this is not an accident (but it is retarded)
+    tbuf_group->wchar_input_buffer =         (wchar_t *)heapbuf_alloc_region(p_memory, PMEM_WCHAR_INPUTBUFSIZE);
+    tbuf_group->command_buffer =             (s8 *)heapbuf_alloc_region(p_memory, PMEM_COMMANDBUFFERSIZE);
+    tbuf_group->download_url_buffer =        (s8 *)heapbuf_alloc_region(p_memory, PMEM_COMMANDBUFFERSIZE);
+    tbuf_group->download_outpath_buffer =    (s8 *)heapbuf_alloc_region(p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
+    tbuf_group->user_cmd_buffer =            (s8 *)heapbuf_alloc_region(p_memory, PMEM_USRCOMMANDBUFFERSIZE);
+    tbuf_group->temp_buffer =                (s8 *)heapbuf_alloc_region(p_memory, PMEM_TEMPBUFFERSIZE);
+    tbuf_group->config_buffer =              (s8 *)heapbuf_alloc_region(p_memory, PMEM_CONFIGBUFFERSIZE/2);
+    tbuf_group->paths_buffer =               (s8 *)heapbuf_alloc_region(p_memory, PMEM_CONFIGBUFFERSIZE/2);
+    tbuf_group->stdout_line_buffer =         (s8 *)heapbuf_alloc_region(p_memory, PMEM_STDOUTLINEBUFFERSIZE);
+    tbuf_group->stdout_buffer =              (s8 *)heapbuf_alloc_region(p_memory, PMEM_STDOUTBUFFERSIZE);
+    memset(p_memory->memory, 0, PMEMORY_AMT);
 }
 
 static void imgui_font_load_glyphs(char *font2load, float font_size, runtime_vars *rt_vars) {

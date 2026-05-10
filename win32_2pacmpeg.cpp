@@ -433,12 +433,15 @@ int __stdcall WinMain(HINSTANCE instance,
 
     runtime_vars rt_vars = {0};
     get_runtime_vars(&rt_vars);
+    rt_vars.p_memory_ptr = &p_memory;
     text_buffer_group tbuf_group = {0};
     get_text_buffer_group_ptr(&tbuf_group);
+    rt_vars.tbuf_group_ptr = &tbuf_group;
     platform_thread_info thread_info = {0};
     cmd_options cmd_opts = {0};
     preset_table p_table = {0};
 
+#if 0
     tbuf_group.input_path_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
     tbuf_group.input_path_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
     tbuf_group.output_path_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
@@ -454,6 +457,9 @@ int __stdcall WinMain(HINSTANCE instance,
     tbuf_group.stdout_line_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
     tbuf_group.stdout_buffer =              (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
     memset(p_memory.memory, 0, PMEMORY_AMT);
+#else
+    assign_buffers(&rt_vars, &p_memory);
+#endif
 
     rt_vars.p_table_ptr =               &p_table;
     rt_vars.cmd_opts_ptr =              &cmd_opts;

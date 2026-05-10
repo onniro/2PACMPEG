@@ -98,6 +98,7 @@ struct runtime_vars {
     //bool32 ytdlp_is_running;
     ImFont *default_font;
     text_buffer_group *tbuf_group_ptr;
+    program_memory *p_memory_ptr;
     preset_table *p_table_ptr;
     saved_paths_array paths_array;
     cmd_options *cmd_opts_ptr;
@@ -127,6 +128,7 @@ struct text_buffer_group {
 
     s8 *download_url_buffer;
     s8 *download_outpath_buffer;
+    s8 *download_sections_buffer;
 };
 
 struct preset_table {

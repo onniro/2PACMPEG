@@ -287,11 +287,16 @@ int main(int arg_count, char **args) {
     { return 0; }
     program_memory p_memory = {0};
     platform_make_heap_buffer(&p_memory, PMEMORY_AMT);
+    runtime_vars rt_vars = {0};
+    get_runtime_vars(&rt_vars);
+    rt_vars.p_memory_ptr = &p_memory;
 
     if (!p_memory.memory) { return -1; }
     cmd_options cmd_opts = {0};
     text_buffer_group tbuf_group = {0};
     get_text_buffer_group_ptr(&tbuf_group);
+    rt_vars.tbuf_group_ptr = &tbuf_group;
+#if 0
     tbuf_group.input_path_buffer =          (s8 *)heapbuf_alloc_region(&p_memory, PMEM_INPUTPATHBUFFERSIZE);
     tbuf_group.output_path_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE);
     tbuf_group.default_path_buffer =        (s8 *)heapbuf_alloc_region(&p_memory, PMEM_OUTPUTPATHBUFFERSIZE); //no this is not an accident (but it is retarded)
@@ -306,6 +311,9 @@ int main(int arg_count, char **args) {
     tbuf_group.stdout_line_buffer =         (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTLINEBUFFERSIZE);
     tbuf_group.stdout_buffer =              (s8 *)heapbuf_alloc_region(&p_memory, PMEM_STDOUTBUFFERSIZE);
     memset(p_memory.memory, 0, PMEMORY_AMT);
+#else
+    assign_buffers(&rt_vars, &p_memory);
+#endif
 
     s8 _diagnostic_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0};
     s8 _ffprobe_buffer[PMEM_DIAGNOSTICBUFFERSIZE] = {0}; 
@@ -319,8 +327,6 @@ int main(int arg_count, char **args) {
     p_table.command_table = (s8 **)heapbuf_alloc_region(&p_memory, MAX_PRESETS);
 
     platform_thread_info thread_info = {0};
-    runtime_vars rt_vars = {0};
-    get_runtime_vars(&rt_vars);
     rt_vars.win_width = 960;
     rt_vars.win_height = 540;
     rt_vars.ffmpeg_is_running = false;

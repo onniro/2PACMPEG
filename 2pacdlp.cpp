@@ -8,7 +8,8 @@ yt-dlp front-end "extension" added in 3.0
 
 #include "2pacmpeg.h"
 
-#define _2PACDLP_OPTIONS_STRING_SIZE (4096)
+#define _2PACDLP_OPTS_STR_SIZE       (4096)
+#define _2PACDLP_DL_SECT_STR_SIZE    (256)
 
 //TODO: separate video and audio codecs
 enum media_format {
@@ -49,13 +50,13 @@ struct tupacdlp_options {
     bool disable_video;
     bool disable_audio;
     media_format selected_format;
-    char options_string[_2PACDLP_OPTIONS_STRING_SIZE];
+    char options_string[_2PACDLP_OPTS_STR_SIZE];
 };
 
 static void make_options_string(tupacdlp_options *options) {
     char *str = options->options_string;
     str[0] = 0;
-    int str_length = 0, str_max = _2PACDLP_OPTIONS_STRING_SIZE;
+    int str_length = 0, str_max = _2PACDLP_OPTS_STR_SIZE;
 
     if (options->disable_video) {
         str_length += snprintf(str + str_length, str_max - str_length, " -x ");
@@ -64,7 +65,9 @@ static void make_options_string(tupacdlp_options *options) {
     }
 
     if (options->selected_format != media_format_auto) {
-        str_length += snprintf(str + str_length, str_max - str_length, " --recode-video %s ",
+        str_length += snprintf(str + str_length,
+                            str_max - str_length,
+                            " --recode-video %s ",
                             media_format_strings[options->selected_format]);
     }
 }
@@ -198,6 +201,7 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
         ImGui::EndCombo();
     }
 
+
     ImGui::PopItemWidth();
     ImGui::SameLine();
     ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0xFF, 0, 0xFF));
@@ -205,6 +209,14 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
     ImGui::PopStyleColor();
     ImGui::SetItemTooltip("note: 2PACDLP does not consider whether or not the selected \n"
                         "output format makes sense when audio/video is disabled/enabled.");
+
+
+#if 0
+    ImGui::SameLine();
+    ImGui::InputText("##download sections",
+            tbuf_group->download_sections_buffer,
+            _2PACDLP_DL_SECT_STR_SIZE);
+#endif
 
     if (ImGui::Button("download##2pacdlp_download"))
     { start_download(rt_vars, tbuf_group, thread_info, &options); }
