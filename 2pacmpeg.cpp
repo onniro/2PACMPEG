@@ -674,14 +674,13 @@ static void load_startup_files(text_buffer_group *tbuf_group, preset_table *p_ta
         printf("[info]: loaded startup file.\n");
 #endif
 #endif
+        //NOTE: as of 3.1 this shit is ignored since this comes from a different file
         //s8 *default_dir_ptr = strchr(tbuf_group->config_buffer, TOKEN_OUTPUTDIR);
         //if (default_dir_ptr && (*(default_dir_ptr + 1) != '\n')) {
-            //tbuf_group->default_path_buffer[0] = 0;
-            //NOTE: as of 3.1, more than 1 of these is allowed and it is in a separate file so 
-            //this shit is ignored
-            //strncpy(tbuf_group->default_path_buffer, 
-            //        default_dir_ptr + 1,
-            //        command_length(default_dir_ptr + 1));
+        //    tbuf_group->default_path_buffer[0] = 0;
+        //    strncpy(tbuf_group->default_path_buffer, 
+        //            default_dir_ptr + 1,
+        //            command_length(default_dir_ptr + 1));
         //}
         
         s8 *name_ptr = tbuf_group->config_buffer;
@@ -815,7 +814,6 @@ static u64 path_buffer_bytes(char **paths) {
 }
 
 static void remove_saved_path(u32 path_index, runtime_vars *rt_vars) {
-//debug this shit some more i have no idea what is going on bro
     saved_paths_array *p_array = &rt_vars->paths_array;
     char *path_begin = p_array->paths[path_index];
     int path_length = strlen(path_begin);
@@ -843,9 +841,9 @@ static void remove_saved_path(u32 path_index, runtime_vars *rt_vars) {
 
 #if _2PACMPEG_DEBUG
     printf("removed path #%d, buffer_bytes=%d\narray:\n", p_array->num_paths, p_array->buffer_bytes);
-    for (int i = 0; i < p_array->num_paths; ++i) {
-        printf("%s\n", p_array->paths[i]);
-    }
+    //for (int i = 0; i < p_array->num_paths; ++i) {
+    //    printf("%s\n", p_array->paths[i]);
+    //}
 #endif
 }
 

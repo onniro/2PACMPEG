@@ -1,4 +1,4 @@
-# 2PACMPEG - graphical FFmpeg front-end for doctors and nuclear scientists
+# 2PACMPEG - graphical FFmpeg front-end for boss playas
 
 <img alt="original icon for 2PACMPEG" src="misc/FFMPAC_OG.ico" style="width:40%;">
 

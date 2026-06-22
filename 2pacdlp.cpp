@@ -210,7 +210,6 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
     ImGui::SetItemTooltip("note: 2PACDLP does not consider whether or not the selected \n"
                         "output format makes sense when audio/video is disabled/enabled.");
 
-
 #if 0
     ImGui::SameLine();
     ImGui::InputText("##download sections",
