@@ -51,6 +51,7 @@ static void show_help() {
              "-q | --quiet -> silence output\n "
              "-i <file name> -> add input file\n"
              "-o <file name> -> specify output file name\n"
+             "-use <preset index> -> select preset index to use (-ls to see presets and their indices)\n"
              "-ls -> dump presets to standard output\n"
              "-add <preset name>=\"<ffmpeg arguments>\" -> add new preset\n"
              "-rm <index> -> remove preset at index\n"
