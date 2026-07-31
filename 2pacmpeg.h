@@ -2,8 +2,8 @@
 #if !defined(_2PACMPEG_DOT_H)
 
 #define _2PACMPEG_VERSION_MAJOR (3)
-#define _2PACMPEG_VERSION_MINOR (0)
-#define _2PACMPEG_VERSION_PATCH (5)
+#define _2PACMPEG_VERSION_MINOR (1)
+#define _2PACMPEG_VERSION_PATCH (0)
 
 #define PMEMORY_AMT MEGABYTES(7)
 
@@ -128,7 +128,6 @@ struct text_buffer_group {
 
     s8 *download_url_buffer;
     s8 *download_outpath_buffer;
-    s8 *download_sections_buffer;
 };
 
 struct preset_table {

@@ -8,48 +8,56 @@ yt-dlp front-end "extension" added in 3.0
 
 #include "2pacmpeg.h"
 
-#define _2PACDLP_OPTS_STR_SIZE       (4096)
+#define _2PACDLP_OPTS_STR_SIZE       (8192)
 #define _2PACDLP_DL_SECT_STR_SIZE    (256)
 
-//TODO: separate video and audio codecs
-enum media_format {
-    media_format_auto = 0,
-    media_format_avi,
-    media_format_flv,
-    media_format_gif,
-    media_format_mkv, 
-    media_format_mov, 
-    media_format_mp4, 
-    media_format_webm, 
-    media_format_aac, 
-    media_format_aiff, 
-    media_format_alac, 
-    media_format_flac, 
-    media_format_m4a, 
-    media_format_mka, 
-    media_format_mp3, 
-    media_format_ogg, 
-    media_format_opus, 
-    media_format_vorbis, 
-    media_format_wav,
+enum video_format {
+    video_format_auto = 0,
+    video_format_avi,
+    video_format_flv,
+    video_format_gif,
+    video_format_mkv, 
+    video_format_mov, 
+    video_format_mp4, 
+    video_format_webm, 
 
-    media_format__LAST
+    video_format__LAST
 };
 
+enum audio_format {
+    audio_format_auto = 0,
+    audio_format_aac, 
+    audio_format_aiff, 
+    audio_format_alac, 
+    audio_format_flac, 
+    audio_format_m4a, 
+    audio_format_mka, 
+    audio_format_mp3, 
+    audio_format_ogg, 
+    audio_format_opus, 
+    audio_format_vorbis, 
+    audio_format_wav,
 
-char media_format_strings[][8] = {
+    audio_format__LAST
+};
+
+char video_format_strings[][8] = {
     "auto", "avi", "flv", "gif",
-    "mkv ", "mov ", "mp4 ",
-    "webm", "aac", "aiff",
-    "alac ", "flac ", "m4a ",
+    "mkv ", "mov ", "mp4 ", "webm"
+};
+char audio_format_strings[][8] = {
+    "auto", "aac ", "aiff ",
+    "alac", "flac ", "m4a ",
     "mka ", "mp3 ", "ogg ",
-    "opus ", "vorbis ", "wav" 
+    "opus ", "vorbis ", "wav"
 };
 
 struct tupacdlp_options {
     bool disable_video;
     bool disable_audio;
-    media_format selected_format;
+    video_format selected_video_format;
+    audio_format selected_audio_format;
+    char dl_sections_buffer[_2PACDLP_DL_SECT_STR_SIZE];
     char options_string[_2PACDLP_OPTS_STR_SIZE];
 };
 
@@ -64,11 +72,18 @@ static void make_options_string(tupacdlp_options *options) {
         str_length += snprintf(str + str_length, str_max - str_length, " -f bv ");
     }
 
-    if (options->selected_format != media_format_auto) {
+    if (!options->disable_video &&
+        (options->selected_video_format != video_format_auto)) {
         str_length += snprintf(str + str_length,
                             str_max - str_length,
                             " --recode-video %s ",
-                            media_format_strings[options->selected_format]);
+                            video_format_strings[options->selected_video_format]);
+    } if (!options->disable_audio &&
+        (options->selected_audio_format != audio_format_auto)) {
+        str_length += snprintf(str + str_length,
+                            str_max - str_length,
+                            " --audio-format %s ",
+                            audio_format_strings[options->selected_audio_format]);
     }
 }
 
@@ -114,7 +129,8 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
                     runtime_vars *rt_vars, 
                     platform_thread_info *thread_info) {
     LOCAL_STATIC tupacdlp_options options = {
-        .selected_format = media_format_auto
+        .selected_video_format = video_format_auto,
+        .selected_audio_format = audio_format_auto
     };
     //char ytdlp_exists = platform_check_ytdlp_existence(tbuf_group);
     saved_paths_array *paths_array = &rt_vars->paths_array;
@@ -184,16 +200,16 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
 
     ImGui::SameLine();
     ImGui::PushItemWidth(100);
-    if (ImGui::BeginCombo("output format##out_format",
-        media_format_strings[options.selected_format])) {
+    if (ImGui::BeginCombo("video format##video_format",
+        video_format_strings[options.selected_video_format])) {
         ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
         ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.5f));
         for (int format_index = 0;
-            format_index < (int)media_format__LAST;
+            format_index < (int)video_format__LAST;
             ++format_index) {
-            if (ImGui::Button(media_format_strings[format_index], 
+            if (ImGui::Button(video_format_strings[format_index], 
                 ImVec2(ImGui::GetContentRegionAvail().x, 20))) {
-                options.selected_format = (media_format)format_index;
+                options.selected_video_format = (video_format)format_index;
             }
         }
         ImGui::PopStyleVar();
@@ -201,6 +217,25 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
         ImGui::EndCombo();
     }
 
+    ImGui::SameLine();
+    ImGui::PushItemWidth(100);
+    if (ImGui::BeginCombo("audio format##audio_format",
+        audio_format_strings[options.selected_audio_format])) {
+        ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.5f));
+        for (int format_index = 0;
+            format_index < (int)audio_format__LAST;
+            ++format_index) {
+            if (ImGui::Button(audio_format_strings[format_index], 
+                ImVec2(ImGui::GetContentRegionAvail().x, 20))) {
+                options.selected_audio_format = (audio_format)format_index;
+            }
+        }
+        ImGui::PopStyleVar();
+        ImGui::PopStyleColor();
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
 
     ImGui::PopItemWidth();
     ImGui::SameLine();
@@ -210,10 +245,11 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
     ImGui::SetItemTooltip("note: 2PACDLP does not consider whether or not the selected \n"
                         "output format makes sense when audio/video is disabled/enabled.");
 
+    
+    //TODO
 #if 0
-    ImGui::SameLine();
-    ImGui::InputText("##download sections",
-            tbuf_group->download_sections_buffer,
+    ImGui::InputText("download section(s)##download_sections",
+            options.dl_sections_buffer,
             _2PACDLP_DL_SECT_STR_SIZE);
 #endif
 

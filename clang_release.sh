@@ -8,6 +8,7 @@ LINK_LIBS="-lX11 $PWD/deps/GLFW/linux/libglfw3.a -static-libstdc++ -static-libgc
 MISC_FLAGS="-O2 -o 2pacmpeg -s"
 DEFINES="-D_2PACMPEG_LINUX=1 -D_2PACMPEG_DEBUG=0 -D_2PACMPEG_RELEASE=1 -D_2PACMPEG_ENABLE_CHINESE_SIMPLIFIED=0 -D_2PACMPEG_ENABLE_CHINESE_FULL=0"
 WARNINGLEVEL="-Wno-parentheses -Wno-format -Wno-unicode-whitespace"
+OBJ_FILES=""
 
 mkdir $WORKDIR
 cd $WORKDIR
