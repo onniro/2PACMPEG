@@ -263,8 +263,7 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
     ImGui::Text("!");
     ImGui::PopStyleColor();
     ImGui::SetItemTooltip("for downloading a time range, prefix the range with * (e.g. *10:10-11:11)\n"
-                        "this also works with the name of a chapter if the video has any\n"
-                        "a negative time range may also be used and it will be calculated from the end");
+                        "this also works with the name of a chapter if the video has any\n");
 
     if (ImGui::Button("download##2pacdlp_download"))
     { start_download(rt_vars, tbuf_group, thread_info, &options); }
