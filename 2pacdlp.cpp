@@ -85,6 +85,13 @@ static void make_options_string(tupacdlp_options *options) {
                             " --audio-format %s ",
                             audio_format_strings[options->selected_audio_format]);
     }
+
+    if (options->dl_sections_buffer[0]) {
+        str_length += snprintf(str + str_length,
+                            str_max - str_length,
+                            " --download-sections \"%s\" ",
+                            options->dl_sections_buffer);
+    }
 }
 
 static void start_download(runtime_vars *rt_vars,
@@ -243,15 +250,21 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
     ImGui::Text("!");
     ImGui::PopStyleColor();
     ImGui::SetItemTooltip("note: 2PACDLP does not consider whether or not the selected \n"
-                        "output format makes sense when audio/video is disabled/enabled.");
+                        "video/audio formats make sense with each other.");
 
     
-    //TODO
-#if 0
-    ImGui::InputText("download section(s)##download_sections",
+    ImGui::PushItemWidth(200);
+    ImGui::InputText("download section##download_sections",
             options.dl_sections_buffer,
             _2PACDLP_DL_SECT_STR_SIZE);
-#endif
+    ImGui::PopItemWidth();
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0xFF, 0, 0xFF));
+    ImGui::Text("!");
+    ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("for downloading a time range, prefix the range with * (e.g. *10:10-11:11)\n"
+                        "this also works with the name of a chapter if the video has any\n"
+                        "a negative time range may also be used and it will be calculated from the end");
 
     if (ImGui::Button("download##2pacdlp_download"))
     { start_download(rt_vars, tbuf_group, thread_info, &options); }
