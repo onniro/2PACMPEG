@@ -65,6 +65,8 @@ typedef struct {
     f32 z;
 } vec3;
 
+static inline void thangz_nop() {}
+
 #if defined(THANGZ_STRING)
 
 static inline u32 string_length(s8 *string) {
