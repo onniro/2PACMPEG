@@ -8,8 +8,9 @@ yt-dlp front-end "extension" added in 3.0
 
 #include "2pacmpeg.h"
 
-#define _2PACDLP_OPTS_STR_SIZE       (8192)
-#define _2PACDLP_DL_SECT_STR_SIZE    (256)
+#define _2PACDLP_OPTS_STR_SIZE              (10240)
+#define _2PACDLP_DL_SECT_STR_SIZE           (256)
+#define _2PACDLP_ADVANCED_OPT_STR_SIZE      (4096)
 
 enum video_format {
     video_format_auto = 0,
@@ -41,10 +42,26 @@ enum audio_format {
     audio_format__LAST
 };
 
+enum cookie_source_browser {
+    browser_none = 0,
+    browser_brave,
+    browser_chrome,
+    browser_chromium,
+    browser_edge,
+    browser_firefox,
+    browser_opera,
+    browser_safari,
+    browser_vivaldi,
+    browser_whale,
+
+    browser__LAST
+};
+
 char video_format_strings[][8] = {
     "auto", "avi", "flv", "gif",
     "mkv ", "mov ", "mp4 ", "webm"
 };
+
 char audio_format_strings[][8] = {
     "auto", "aac ", "aiff ",
     "alac", "flac ", "m4a ",
@@ -52,12 +69,22 @@ char audio_format_strings[][8] = {
     "opus ", "vorbis ", "wav"
 };
 
+char browser_strings[][12] = {
+    "none", "brave",
+    "chrome", "chromium",
+    "edge", "firefox",
+    "opera", "safari",
+    "vivaldi", "whale"
+};
+
 struct tupacdlp_options {
     bool disable_video;
     bool disable_audio;
     video_format selected_video_format;
     audio_format selected_audio_format;
+    cookie_source_browser selected_browser;
     char dl_sections_buffer[_2PACDLP_DL_SECT_STR_SIZE];
+    char advanced_options[_2PACDLP_ADVANCED_OPT_STR_SIZE];
     char options_string[_2PACDLP_OPTS_STR_SIZE];
 };
 
@@ -91,6 +118,20 @@ static void make_options_string(tupacdlp_options *options) {
                             str_max - str_length,
                             " --download-sections \"%s\" ",
                             options->dl_sections_buffer);
+    }
+
+    if (options->selected_browser != browser_none) {
+        str_length += snprintf(str + str_length,
+                            str_max - str_length,
+                            " --cookies-from-browser %s ",
+                            browser_strings[options->selected_browser]);
+    }
+
+    if (options->advanced_options[0]) {
+        str_length += snprintf(str + str_length,
+                            str_max - str_length,
+                            " %s ",
+                            options->advanced_options);
     }
 }
 
@@ -130,6 +171,22 @@ static void start_download(runtime_vars *rt_vars,
     thread_info->prog_enum = program_enum_ytdlp;
     platform_execute_command(tbuf_group, thread_info, rt_vars, true);
 }
+
+//xaxaxaxaxa
+#define DO_COMBOBOX(titles_array, button_count, enum2set, enum_type) { \
+    ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0)); \
+    ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.5f)); \
+    for (int button_index = 0; \
+        button_index < button_count; \
+        ++button_index) { \
+        if (ImGui::Button(titles_array[button_index],  \
+            ImVec2(ImGui::GetContentRegionAvail().x, 20))) { \
+            enum2set = (enum_type)button_index; \
+        } \
+    } \
+    ImGui::PopStyleVar(); \
+    ImGui::PopStyleColor(); \
+} _2pacmpeg_nop()
 
 static void do_2pacdlp(text_buffer_group *tbuf_group, 
                     preset_table *p_table, 
@@ -187,6 +244,7 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
         ImGui::PopStyleColor();
         ImGui::EndCombo();
     }
+
     ImGui::SameLine();
     ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize("save").x - 30);
     ImGui::InputText("##download output path",
@@ -209,18 +267,10 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
     ImGui::PushItemWidth(100);
     if (ImGui::BeginCombo("video format##video_format",
         video_format_strings[options.selected_video_format])) {
-        ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
-        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.5f));
-        for (int format_index = 0;
-            format_index < (int)video_format__LAST;
-            ++format_index) {
-            if (ImGui::Button(video_format_strings[format_index], 
-                ImVec2(ImGui::GetContentRegionAvail().x, 20))) {
-                options.selected_video_format = (video_format)format_index;
-            }
-        }
-        ImGui::PopStyleVar();
-        ImGui::PopStyleColor();
+        DO_COMBOBOX(video_format_strings,
+                (int)video_format__LAST,
+                options.selected_video_format,
+                video_format);
         ImGui::EndCombo();
     }
 
@@ -228,29 +278,21 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
     ImGui::PushItemWidth(100);
     if (ImGui::BeginCombo("audio format##audio_format",
         audio_format_strings[options.selected_audio_format])) {
-        ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(0, 0, 0, 0));
-        ImGui::PushStyleVar(ImGuiStyleVar_ButtonTextAlign, ImVec2(0, 0.5f));
-        for (int format_index = 0;
-            format_index < (int)audio_format__LAST;
-            ++format_index) {
-            if (ImGui::Button(audio_format_strings[format_index], 
-                ImVec2(ImGui::GetContentRegionAvail().x, 20))) {
-                options.selected_audio_format = (audio_format)format_index;
-            }
-        }
-        ImGui::PopStyleVar();
-        ImGui::PopStyleColor();
+        DO_COMBOBOX(audio_format_strings,
+                (int)audio_format__LAST,
+                options.selected_audio_format,
+                audio_format);
         ImGui::EndCombo();
     }
-    ImGui::SameLine();
+    //ImGui::SameLine();
 
-    ImGui::PopItemWidth();
-    ImGui::SameLine();
-    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0xFF, 0, 0xFF));
-    ImGui::Text("!");
-    ImGui::PopStyleColor();
-    ImGui::SetItemTooltip("note: 2PACDLP does not consider whether or not the selected \n"
-                        "video/audio formats make sense with each other.");
+    //ImGui::PopItemWidth();
+    //ImGui::SameLine();
+    //ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0xFF, 0, 0xFF));
+    //ImGui::Text("!");
+    //ImGui::PopStyleColor();
+    //ImGui::SetItemTooltip("note: 2PACDLP does not consider whether or not the selected \n"
+    //                    "video/audio formats make sense with each other.");
 
     
     ImGui::PushItemWidth(200);
@@ -265,7 +307,55 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
     ImGui::SetItemTooltip("for downloading a time range, prefix the range with * (e.g. *10:10-11:11)\n"
                         "this also works with the name of a chapter if the video has any\n");
 
-    if (ImGui::Button("download##2pacdlp_download"))
+    ImGui::SameLine();
+    if (ImGui::BeginCombo("browser for cookies##browser4cookies",
+        browser_strings[options.selected_browser])) {
+        DO_COMBOBOX(browser_strings,
+                (int)browser__LAST,
+                options.selected_browser,
+                cookie_source_browser);
+        ImGui::EndCombo();
+    }
+    ImGui::SameLine();
+    ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(0, 0xFF, 0, 0xFF));
+    ImGui::Text("!");
+    ImGui::PopStyleColor();
+    ImGui::SetItemTooltip("if the service you are downloading from requires logging in\n"
+                        "to access the content you wish to download, try selecting\n"
+                        "a browser with which you are logged into the service from this combo box");
+
+    ImGui::SameLine();
+    LOCAL_STATIC char advanced_options_win_open = false;
+    if (ImGui::Button("enter advanced options##advanced_options_button") &&
+        !advanced_options_win_open) {
+        advanced_options_win_open = true;
+        float w = 600, h = 60; 
+        ImGui::SetNextWindowSize(ImVec2(w, h));
+        ImVec2 winpos = ImVec2((rt_vars->win_width/2) - (w/2),
+                               (rt_vars->win_height/2) - (h/2));
+        ImGui::SetNextWindowPos(winpos);
+    }
+
+    if (advanced_options_win_open) {
+        if (ImGui::Begin("enter advanced options##advanced_options_window", 0,
+            ImGuiWindowFlags_NoScrollbar
+            |ImGuiWindowFlags_NoResize
+            |ImGuiWindowFlags_NoCollapse)) {
+            ImGui::SetKeyboardFocusHere(0);
+            if (ImGui::IsKeyPressed(ImGuiKey_Escape) ||
+                (!ImGui::IsWindowHovered() &&
+                ImGui::IsMouseClicked(ImGuiMouseButton_Left)))
+            { advanced_options_win_open = false; }
+
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::InputText("##advanced_options_input",
+                    options.advanced_options,
+                    _2PACDLP_ADVANCED_OPT_STR_SIZE - 1);
+            ImGui::End();
+        }
+    }
+
+    if (ImGui::Button("start download##2pacdlp_download"))
     { start_download(rt_vars, tbuf_group, thread_info, &options); }
     ImGui::SameLine();
     if (ImGui::Button("clear output##2pacdlp_clear_output")) {
@@ -274,9 +364,9 @@ static void do_2pacdlp(text_buffer_group *tbuf_group,
         memset(tbuf_group->stdout_line_buffer, 0, strlen(tbuf_group->stdout_line_buffer));
     }
 
-    ImGui::SameLine(ImGui::GetColumnWidth() - ImGui::CalcTextSize("kill").x - 15.0f);
+    ImGui::SameLine(ImGui::GetColumnWidth() - ImGui::CalcTextSize("kill yt-dlp").x - 15.0f);
     //reminder that this just kills which ever program is running since there can only be one at a time
-    if (ImGui::Button("kill##2pacdlp_kill")) {
+    if (ImGui::Button("kill yt-dlp##2pacdlp_kill")) {
         tbuf_group->diagnostic_buffer[0] = 0x0;
         if (rt_vars->ffmpeg_is_running) {
             if (platform_kill_process(thread_info)) {
