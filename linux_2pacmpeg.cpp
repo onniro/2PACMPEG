@@ -246,11 +246,8 @@ static void platform_load_font(runtime_vars *rt_vars, float font_size) {
     FcInit();
     FcConfig *fc_cfg = FcInitLoadConfigAndFonts();
 
-    //FcPattern *pattern = FcNameParse((const FcChar8 *)"Liberation Mono:Regular");
-    FcPattern *pattern = FcNameParse((const FcChar8 *)"DejaVu Sans Mono:Regular");
-    //FcPattern *pattern = FcNameParse((const FcChar8 *)"Unifont:Regular");
-
-    FcObjectSet* obj_set = FcObjectSetBuild(FC_FILE, (void *)0);
+    FcPattern *pattern = FcNameParse((const FcChar8 *)"Liberation Mono:Regular");
+    FcObjectSet *obj_set = FcObjectSetBuild(FC_FILE,  (void *)0);
     FcFontSet *font_set = FcFontList(fc_cfg, pattern, obj_set);
     FcChar8 *file;
     FcPattern *font;
