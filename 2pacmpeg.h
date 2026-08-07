@@ -2,8 +2,8 @@
 #if !defined(_2PACMPEG_DOT_H)
 
 #define _2PACMPEG_VERSION_MAJOR (3)
-#define _2PACMPEG_VERSION_MINOR (2)
-#define _2PACMPEG_VERSION_PATCH (0)
+#define _2PACMPEG_VERSION_MINOR (3)
+#define _2PACMPEG_VERSION_PATCH (1)
 
 #define PMEMORY_AMT MEGABYTES(7)
 
@@ -145,6 +145,8 @@ struct cmd_options {
     char *splash_image_path;
     int splash_screen_frames;
 };
+
+static inline void _2pacmpeg_nop() {}
 
 //(forward declarations)
 
