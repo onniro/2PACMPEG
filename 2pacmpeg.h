@@ -3,7 +3,7 @@
 
 #define _2PACMPEG_VERSION_MAJOR (3)
 #define _2PACMPEG_VERSION_MINOR (3)
-#define _2PACMPEG_VERSION_PATCH (1)
+#define _2PACMPEG_VERSION_PATCH (2)
 
 #define PMEMORY_AMT MEGABYTES(7)
 
@@ -44,6 +44,8 @@
     #define MAX_FRAMETIME_MILLISECONDS ((DWORD)16)
     #define DEFAULT_FONT_SIZE (14.0f)
 #endif
+
+static inline void _2pacmpeg_nop() {}
 
 struct program_memory;
 struct runtime_vars;
@@ -145,8 +147,6 @@ struct cmd_options {
     char *splash_image_path;
     int splash_screen_frames;
 };
-
-static inline void _2pacmpeg_nop() {}
 
 //(forward declarations)
 
